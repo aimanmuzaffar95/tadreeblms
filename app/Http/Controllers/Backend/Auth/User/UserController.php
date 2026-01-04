@@ -60,6 +60,8 @@ class UserController extends Controller
      */
     public function getData(Request $request)
     {
+
+        
         if($request->role &&  $request->role != ""){
             $users = User::role($request->role)->with('roles', 'permissions', 'providers')
                 ->orderBy('users.created_at', 'desc');
