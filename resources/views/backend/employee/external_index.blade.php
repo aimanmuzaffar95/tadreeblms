@@ -31,7 +31,7 @@ width: 44% !important;
         <div class="grow">
             <h4 class="text-20">Trainee</h4>
         </div>
-        @can('course_create')
+        @can('trainee_create')
         <div>
             <a href="{{ route('admin.employee.external.create') }}">
 

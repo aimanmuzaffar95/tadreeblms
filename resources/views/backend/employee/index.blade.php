@@ -47,7 +47,7 @@
             <h4 class="text-20">@lang('Trainee')</h4>
         </div>
 
-        @can('course_create')
+        @can('trainee_create')
         <div>
             <a href="{{ route('admin.employee.create') }}">
                 <button type="button" class="add-btn">

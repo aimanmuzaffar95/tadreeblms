@@ -41,6 +41,7 @@ class PermissionRoleTableSeeder extends Seeder
             'settings',
             'send_email_notification',
             //'user',
+            'user_management',
             'permission',
             'role',
             'course',

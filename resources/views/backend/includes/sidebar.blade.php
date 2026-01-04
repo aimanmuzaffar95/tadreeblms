@@ -28,7 +28,7 @@
 
             @endcan
 
-            @if ($logged_in_user->isAdmin())
+            @if (true)
             @if (null == Session::get('setvaluesession') ||
             (null !== Session::get('setvaluesession') && in_array(Session::get('setvaluesession'), [1,2,3]))
             )
@@ -317,11 +317,9 @@
             @can('bundle_access')
 
             @endcan
-            @if ($logged_in_user->hasRole('teacher') || $logged_in_user->isAdmin())
-
+            
             @endif
-            @endif
-            @if ($logged_in_user->isAdmin())
+            @if (true)
             @can('learning_pathway_access')
             <li
                 class="nav-item nav-dropdown {{ active_class(Active::checkUriPattern(['user/learning-pathways', 'user/pathway-assignments', 'user/pathway-assignments/create']), 'open') }}">
@@ -359,7 +357,7 @@
             (null !== Session::get('setvaluesession') && in_array(Session::get('setvaluesession'), [1,2,3]))
             )
 
-            @if ($logged_in_user->isAdmin())
+            @if (true)
             @can('contact_request_access')
             <li class="nav-item ">
                 <a class="nav-link {{ $request->segment(2) == 'contact-requests' ? 'active' : '' }}"
@@ -439,7 +437,7 @@
             @if (null == Session::get('setvaluesession') ||
             (null !== Session::get('setvaluesession') && in_array(Session::get('setvaluesession'), [1])))
 
-            @if ($logged_in_user->isAdmin() || $logged_in_user->hasAnyPermission(['blog_access', 'page_access', 'reason_access']))
+            @if (true)
             @can('site_management_access')
             <li
                 class="nav-item nav-dropdown  {{ active_class(Active::checkUriPattern(['user/contact', 'user/sponsors*', 'user/testimonials*', 'user/faqs*', 'user/footer*', 'user/blogs', 'user/sitemap*']), 'open') }}">
@@ -573,7 +571,7 @@
                 </a>
             </li>
             @endif
-            @if ($logged_in_user->hasRole('teacher'))
+            @if (true)
             <li class="nav-item ">
                 <a class="nav-link {{ $request->segment(1) == 'reviews' ? 'active' : '' }}"
                     href="{{ route('admin.reviews.index') }}">
@@ -582,47 +580,44 @@
             </li>
             @endif
 
-            @if ($logged_in_user->isAdmin())
-
-
-            @endif
+           
 
             @if ($logged_in_user->hasRole('student'))
           
-            <li class="nav-item ">
-                <a class="nav-link {{ $request->segment(1) == 'user.myassignment' ? 'active' : '' }}"
-                    href="{{ route('user.myassignment') }}">
-                    <i class="nav-icon fas fa-folder"></i>
-                    <span class="title">@lang('menus.backend.sidebar.My-Assignments')</span>
-                </a>
-            </li>
+                <li class="nav-item ">
+                    <a class="nav-link {{ $request->segment(1) == 'user.myassignment' ? 'active' : '' }}"
+                        href="{{ route('user.myassignment') }}">
+                        <i class="nav-icon fas fa-folder"></i>
+                        <span class="title">@lang('menus.backend.sidebar.My-Assignments')</span>
+                    </a>
+                </li>
 
 
-            <li class="nav-item ">
-                <a class="nav-link {{ $request->segment(1) == 'user.calender' ? 'active' : '' }}"
-                    href="{{ route('user.calender') }}">
-                    <i class="nav-icon fa fa-calendar"></i>
-                    <span class="title">@lang('menus.backend.sidebar.calendar')</span>
-                </a>
-            </li>
+                <li class="nav-item ">
+                    <a class="nav-link {{ $request->segment(1) == 'user.calender' ? 'active' : '' }}"
+                        href="{{ route('user.calender') }}">
+                        <i class="nav-icon fa fa-calendar"></i>
+                        <span class="title">@lang('menus.backend.sidebar.calendar')</span>
+                    </a>
+                </li>
 
-            <li class="nav-item ">
-                <a class="nav-link {{ $request->segment(1) == 'user.subscriptions' ? 'active' : '' }}"
-                    href="{{ route('user.subscriptions') }}">
-                    <i class="nav-icon fas fa-credit-card"></i>
-                    <span class="title">@lang('menus.backend.sidebar.subscription.title')</span>
-                </a>
-            </li>
+                <li class="nav-item ">
+                    <a class="nav-link {{ $request->segment(1) == 'user.subscriptions' ? 'active' : '' }}"
+                        href="{{ route('user.subscriptions') }}">
+                        <i class="nav-icon fas fa-credit-card"></i>
+                        <span class="title">@lang('menus.backend.sidebar.subscription.title')</span>
+                    </a>
+                </li>
 
-            <li class="nav-item ">
-                <a class="nav-link {{ $request->segment(1) == 'wishlist' ? 'active' : '' }}"
-                    href="{{ route('admin.wishlist.index') }}">
-                    <i class="nav-icon fas fa-heart"></i>
-                    <span class="title">@lang('Wishlist')</span>
-                </a>
-            </li>
+                <li class="nav-item ">
+                    <a class="nav-link {{ $request->segment(1) == 'wishlist' ? 'active' : '' }}"
+                        href="{{ route('admin.wishlist.index') }}">
+                        <i class="nav-icon fas fa-heart"></i>
+                        <span class="title">@lang('Wishlist')</span>
+                    </a>
+                </li>
             @endif
-            @if ($logged_in_user->isAdmin())
+            @if (true)
 
 
 
@@ -727,7 +722,7 @@
             </li>
             @endcan
             @endif
-            @if ($logged_in_user->isAdmin())
+            @if (true)
             @can('send_email_notification_access')
             <li class="nav-item ">
                 <a class="d-flex nav-link {{ $request->segment(2) == 'send-email-notification' ? 'active' : '' }}"

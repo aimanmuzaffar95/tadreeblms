@@ -22,45 +22,70 @@
             <div class="mb-3">
                 <h6>Permissions</h6>
 
+                <div class="permission-blocks row">
                 @foreach($permissions as $module => $modulePermissions)
-                
                     <div class="mb-2 border p-2 rounded">
-                        <strong>{{ $modulePermissions }}</strong>
+                        <strong>{{ ucfirst($module) }}</strong>
                         <div class="form-check">
                             <input type="checkbox" class="form-check-input select-all" data-module="{{ $module }}" id="select_all_{{ $module }}">
                             <label class="form-check-label" for="select_all_{{ $module }}">Select All</label>
                         </div>
 
-                        {{-- @if(isset($modulePermissions))
-                            @foreach($modulePermissions as $permission)
-                                <div class="form-check ms-3">
-                                    <input type="checkbox" name="permissions[]" class="form-check-input {{ $module }}" value="{{ $permission->id }}"
-                                        id="perm_{{ $permission->id }}"
-                                        {{ isset($role) && $role->permissions->contains('id', $permission->id) ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="perm_{{ $permission->id }}">{{ $permission->name }}</label>
-                                </div>
-                            @endforeach
-                        @endif --}}
+                        @foreach($modulePermissions as $permission)
+
+                            @php
+                                $default_permission_checked = false;
+                            @endphp
+
+                            @if($module == 'backend')
+                                @php
+                                    $default_permission_checked = true;
+                                @endphp
+                            @endif
+                            <div class="form-check ms-3">
+                                <input type="checkbox"
+                                    name="permissions[]"
+                                    class="form-check-input permission-{{ $module }}"
+                                    value="{{ $permission->id }}"
+                                    id="perm_{{ $permission->id }}"
+                                    @if($default_permission_checked) checked @endif
+                                    onclick="return false;"
+                                   >
+                                <label class="form-check-label" for="perm_{{ $permission->id }}">
+                                    {{ $permission->name }}
+                                </label>
+                            </div>
+                        @endforeach
                     </div>
                 @endforeach
+                </div>
             </div>
 
             <button type="submit" class="btn btn-success">{{ isset($role) ? 'Update Role' : 'Create Role' }}</button>
         </form>
     </div>
 </div>
-@endsection
 
-@section('scripts')
+
+@push('after-scripts')
 <script>
-    // Select All per module
-    document.querySelectorAll('.select-all').forEach(function(checkbox){
-        checkbox.addEventListener('change', function(){
-            let module = this.dataset.module;
-            document.querySelectorAll('input.' + module).forEach(function(permCheckbox){
-                permCheckbox.checked = checkbox.checked;
-            });
+   document.addEventListener('DOMContentLoaded', function () {
+
+    document.querySelectorAll('.select-all').forEach(function(selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function () {
+
+            //alert('hi'); // THIS WILL NOW SHOW ✅
+
+            const module = this.dataset.module;
+            const permissions = document.querySelectorAll(
+                'input.permission-' + module
+            );
+
+            permissions.forEach(cb => cb.checked = this.checked);
         });
     });
+
+});
 </script>
+@endpush
 @endsection

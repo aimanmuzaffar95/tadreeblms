@@ -36,18 +36,31 @@
                         </div>
 
                         @foreach($modulePermissions as $permission)
+                            @php
+                                $default_permission_checked = ($module === 'backend');
+                                $isChecked = $role->permissions->contains('id', $permission->id) || $default_permission_checked;
+                            @endphp
+
                             <div class="form-check ms-3">
                                 <input type="checkbox"
                                     name="permissions[]"
                                     class="form-check-input permission-{{ $module }}"
                                     value="{{ $permission->id }}"
                                     id="perm_{{ $permission->id }}"
-                                    {{ $role->permissions->contains('id', $permission->id) ? 'checked' : '' }}>
+                                    {{ $isChecked ? 'checked' : '' }}
+                                    {{ $default_permission_checked ? 'disabled' : '' }}>
+
+                                {{-- Hidden input to submit disabled permissions --}}
+                                @if($default_permission_checked)
+                                    <input type="hidden" name="permissions[]" value="{{ $permission->id }}">
+                                @endif
+
                                 <label class="form-check-label" for="perm_{{ $permission->id }}">
                                     {{ $permission->name }}
                                 </label>
                             </div>
                         @endforeach
+
                     </div>
                 @endforeach
                 </div>

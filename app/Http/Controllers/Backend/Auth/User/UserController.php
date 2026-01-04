@@ -41,7 +41,8 @@ class UserController extends Controller
      */
     public function index(ManageUserRequest $request)
     {
-        if (!\Gate::allows('user_access')) {
+        //dd("hh");
+        if (!\Gate::allows('user_management_access')) {
             return abort(401);
         }
         $roles = Role::select('id','name')->get();
@@ -174,6 +175,7 @@ class UserController extends Controller
      */
     public function update(UpdateUserRequest $request, User $user)
     {
+        
         $this->userRepository->update($user, $request->only(
             'first_name',
             'last_name',

@@ -4,7 +4,7 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between">
         <h5>Roles</h5>
-        {{-- <a href="{{ route('admin.roles.create') }}" class="btn btn-primary">Add Role</a> --}}
+        <a href="{{ route('admin.roles.create') }}" class="btn btn-primary">Add Role</a>
     </div>
 
     <div class="card-body">
@@ -27,12 +27,12 @@
                     </td>
                     <td>
                         <a href="{{ route('admin.roles.edit', $role->id) }}" class="btn btn-sm btn-warning">Edit</a>
-                        {{-- <form action="{{ route('admin.roles.destroy', $role->id) }}"
+                        <form action="{{ route('admin.roles.destroy', $role->id) }}"
                               method="POST" class="d-inline">
                             @csrf @method('DELETE')
                             <button class="btn btn-sm btn-danger"
                                 onclick="return confirm('Delete role?')">Delete</button>
-                        </form> --}}
+                        </form>
                     </td>
                 </tr>
             @endforeach

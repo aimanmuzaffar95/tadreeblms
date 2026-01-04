@@ -606,6 +606,54 @@ class DashboardController extends Controller
                 $av_completed_score       = $assessmentStats['avg_score'];
                 $totalAssessments         = $assessmentStats['total'];
                 $total_certificate_issued = $assessmentStats['total_certificate_issued'];
+            }else {
+                //dd("admin");
+                if (Cache::has('admin_dashboard_stats_system')) {
+                    $adminStats = Cache::get('admin_dashboard_stats_system');
+                    if ($adminStats) {
+                        extract($adminStats);
+                    }
+                } else {
+                    $adminStats = self::buildDashboardCache(10);
+                    if ($adminStats) {
+                        extract($adminStats);
+                    }
+                }
+
+                //dd($adminStats);
+
+                $av_completion_rate       = $adminStats['course_completion']['avg_completion_rate'] ?? 0;
+                $total_completed          = $adminStats['course_completion']['completed'] ?? 0;
+                $total_pending            = $adminStats['course_completion']['not_completed'] ?? 0;
+
+                $av_completed_score        = $adminStats['assessment_stats']['avg_score'] ?? 0;
+                $completed_assesment       = $adminStats['assessment_stats']['completed'] ?? 0;
+                $not_completed_assesment   = $adminStats['assessment_stats']['not_completed'] ?? 0;
+
+                return view('backend.dashboard', array_merge(
+                    compact('adminStats'),
+                    compact(
+                        'departments',
+                        'internal_users',
+                        'students_count',
+                        'teachers_count',
+                        'published_courses',
+                        'categories',
+                        'courses_count',
+                        'recent_orders',
+                        'recent_subscriptions',
+                        'recent_contacts',
+                        'total_assignments',
+                        'total_certificate_issued',
+                        'assigned_users_count',
+                        'av_completion_rate',
+                        'total_completed',
+                        'total_pending',
+                        'av_completed_score',
+                        'completed_assesment',
+                        'not_completed_assesment'
+                    )
+                ));
             }
         }
 

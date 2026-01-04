@@ -86,6 +86,10 @@ class EmployeeController extends Controller
             $has_delete = true;
         }
 
+        $has_view   = Gate::allows('trainee_view');
+        $has_edit   = Gate::allows('trainee_edit');
+        $has_delete = Gate::allows('trainee_delete');
+
         return DataTables::of($teachers)
             ->addIndexColumn()
            ->addColumn('actions', function ($q) use ($has_view, $has_edit, $has_delete, $request) {
@@ -194,12 +198,12 @@ class EmployeeController extends Controller
             $has_delete = true;
             $has_reset = true;
         }
-        //     $query = str_replace(array('?'), array('\'%s\''), $teachers->toSql());
-        //    $query = vsprintf($query, $teachers->getBindings());
-        //    dump($query);
-        //    die;
-        //$teachers = $teachers->get();
-        //dd($teachers);
+        
+
+        $has_view   = Gate::allows('trainee_view');
+        $has_edit   = Gate::allows('trainee_edit');
+        $has_delete = Gate::allows('trainee_delete');
+        //$has_reset = true;
 
 
         return DataTables::of($teachers)

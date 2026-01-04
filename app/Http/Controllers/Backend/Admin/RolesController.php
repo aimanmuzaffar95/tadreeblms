@@ -59,9 +59,15 @@ class RolesController extends Controller
         if (! Gate::allows('role_create')) {
             return abort(401);
         }
-        $role = Role::create($request->all());
-        $role->permission()->sync(array_filter((array)$request->input('permission')));
+        $role = Role::create([
+                'name' => $request->name,
+                'guard_name' => 'web',
+            ]);
+        //dd($request->all());
+        $permissionIds = $request->input('permissions', []);
+        $permissions = Permission::whereIn('id', $permissionIds)->get();
 
+        $role->syncPermissions($permissions);
 
 
         return redirect()->route('admin.roles.index');
