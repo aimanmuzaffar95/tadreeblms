@@ -11,22 +11,22 @@
         <table class="table table-bordered">
             <thead>
             <tr>
-                <th>Name</th>
-                <th>Permissions</th>
-                <th width="150">Actions</th>
+                <th width="60%">Name</th>
+                {{-- <th>Permissions</th> --}}
+                <th width="40%">Actions</th>
             </tr>
             </thead>
             <tbody>
             @foreach($roles as $role)
                 <tr>
                     <td>{{ $role->name }}</td>
-                    <td>
+                    {{-- <td>
                         @foreach($role->permissions as $permission)
                             <span class="badge bg-info">{{ $permission->name }}</span>
                         @endforeach
-                    </td>
+                    </td> --}}
                     <td>
-                        <a href="{{ route('admin.roles.edit', $role->id) }}" class="btn btn-sm btn-warning">Edit</a>
+                        <a href="{{ route('admin.roles.edit', $role->id) }}" class="btn btn-sm btn-primary">Edit</a>
                         <form action="{{ route('admin.roles.destroy', $role->id) }}"
                               method="POST" class="d-inline">
                             @csrf @method('DELETE')

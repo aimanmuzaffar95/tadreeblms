@@ -25,6 +25,7 @@ class TeachersController extends Controller
      */
     public function index()
     {
+        //dd("hhfh");
         return view('backend.teachers.index');
     }
 

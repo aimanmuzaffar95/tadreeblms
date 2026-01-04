@@ -35,7 +35,7 @@ Route::group(['middleware' => ['role:administrator']], function () {
 Route::group(['middleware' => 'role:teacher|administrator'], function () {
     Route::resource('orders', 'Admin\OrderController');
 });
-Route::group(['middleware' => 'role:administrator'], function () {
+Route::group(['middleware' => 'permission:trainer_access'], function () {
 
     //===== Teachers Routes =====//
     Route::resource('teachers', 'Admin\TeachersController');

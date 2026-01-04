@@ -47,6 +47,7 @@ class UserController extends Controller
         }
         $roles = Role::select('id','name')->get();
 
+        //dd($this->userRepository->getActivePaginated(25, 'id', 'asc'));
 
         return view('backend.auth.user.index',compact('roles'))
             ->withUsers($this->userRepository->getActivePaginated(25, 'id', 'asc'));
@@ -63,7 +64,8 @@ class UserController extends Controller
             $users = User::role($request->role)->with('roles', 'permissions', 'providers')
                 ->orderBy('users.created_at', 'desc');
         }else{
-            $users = User::role(1)->with('roles', 'permissions', 'providers')
+            $users = User::with('roles', 'permissions', 'providers')
+                ->whereNull('employee_type')
                 ->orderBy('users.created_at', 'desc');
         }
 

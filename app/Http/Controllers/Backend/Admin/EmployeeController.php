@@ -43,6 +43,7 @@ class EmployeeController extends Controller
 {
     use FileUploadTrait;
 
+    
     /**
      * Display a listing of Category.
      *
@@ -50,6 +51,7 @@ class EmployeeController extends Controller
      */
     public function index(Request $request)
     {
+        //dd("fghff");
         $status = $request->get('status');
         return view('backend.employee.index', [
             'status' => $status
@@ -86,6 +88,7 @@ class EmployeeController extends Controller
             $has_delete = true;
         }
 
+        //dd("ghjjg");
         $has_view   = Gate::allows('trainee_view');
         $has_edit   = Gate::allows('trainee_edit');
         $has_delete = Gate::allows('trainee_delete');

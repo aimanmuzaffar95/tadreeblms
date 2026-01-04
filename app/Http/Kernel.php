@@ -4,9 +4,9 @@ namespace App\Http;
 
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
 use Illuminate\Session\Middleware\StartSession;
-use Spatie\Permission\Middleware\PermissionMiddleware as MiddlewarePermissionMiddleware;
-use Spatie\Permission\Middleware\RoleMiddleware as MiddlewareRoleMiddleware;
-use Spatie\Permission\Middleware\RoleOrPermissionMiddleware as MiddlewareRoleOrPermissionMiddleware;
+use Spatie\Permission\Middlewares\PermissionMiddleware as MiddlewarePermissionMiddleware;
+use Spatie\Permission\Middlewares\RoleMiddleware as MiddlewareRoleMiddleware;
+use Spatie\Permission\Middlewares\RoleOrPermissionMiddleware as MiddlewareRoleOrPermissionMiddleware;
 use Spatie\Permission\Middlewares\RoleMiddleware;
 use Spatie\Permission\Middlewares\PermissionMiddleware;
 use Spatie\Permission\Middlewares\RoleOrPermissionMiddleware;

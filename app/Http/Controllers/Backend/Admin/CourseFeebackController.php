@@ -24,7 +24,7 @@ class CourseFeebackController extends Controller
     {
 
         // $courses = Course::get();
-        $courses = $courses = Course::has('category')->whereHas('courseFeedback')->ofTeacher()->pluck('title', 'id')->prepend('All', '');
+        $courses = $courses = Course::has('category')->whereHas('courseFeedback')->pluck('title', 'id')->prepend('All', '');
 
 
         if ($request->ajax()) {

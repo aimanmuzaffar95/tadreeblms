@@ -191,7 +191,7 @@
             </li>
             @endif
             @endcan
-            @if ($logged_in_user->isAdmin() || $logged_in_user->hasRole('teacher'))
+            @if (true)
             @if (null == Session::get('setvaluesession') ||
             (null !== Session::get('setvaluesession') && in_array(Session::get('setvaluesession'), [1,2,3]))
             )
@@ -387,10 +387,7 @@
                 </a>
                 <ul class="nav-dropdown-items">
 
-                    @if (null == Session::get('setvaluesession') ||
-                    (null !== Session::get('setvaluesession') && in_array(Session::get('setvaluesession'), [1,2]))
-                    )
-                    @can('course_access')
+                    
                     <li class="nav-item ">
                         <a class="nav-link {{ $request->segment(2) == 'internal_trainee_info' ? 'active' : '' }}"
                             href="{{ route('admin.employee.internal_trainee_info') }}">
@@ -403,17 +400,15 @@
                             <span class="title">@lang('menus.backend.sidebar.final_reports')</span>
                         </a>
                     </li>
-                    @endcan
+                   
                     <li class="nav-item ">
                         <a class="nav-link {{ $request->segment(2) == 'internal-attendence-report' ? 'active' : '' }}"
                             href="{{ route('admin.employee.internal-attendence-report') }}">
                             <span class="title">@lang('menus.backend.sidebar.internal_attendance_reports')</span>
                         </a>
                     </li>
-                    @endif
-                    @if (null == Session::get('setvaluesession') ||
-                    (null !== Session::get('setvaluesession') && in_array(Session::get('setvaluesession'), [1,3])))
-                    @can('lesson_access')
+                    
+                    
                     <li class="nav-item ">
                         <a class="nav-link {{ $request->segment(2) == 'external_trainee_info' ? 'active' : '' }}"
                             href="{{ route('admin.employee.external_trainee_info') }}">
@@ -426,8 +421,7 @@
                             <span class="title">@lang('menus.backend.sidebar.external_attendance_report')</span>
                         </a>
                     </li>
-                    @endcan
-                    @endif
+                   
 
                 </ul>
             </li>
@@ -572,12 +566,12 @@
             </li>
             @endif
             @if (true)
-            <li class="nav-item ">
+            {{-- <li class="nav-item ">
                 <a class="nav-link {{ $request->segment(1) == 'reviews' ? 'active' : '' }}"
                     href="{{ route('admin.reviews.index') }}">
                     <i class="nav-icon icon-speech"></i> <span class="title">@lang('menus.backend.sidebar.reviews.title')</span>
                 </a>
-            </li>
+            </li> --}}
             @endif
 
            
