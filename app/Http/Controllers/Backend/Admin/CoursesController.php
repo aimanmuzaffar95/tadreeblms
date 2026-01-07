@@ -820,8 +820,10 @@ class CoursesController extends Controller
 
 
         $storage = config('filesystems.default');
+        //dd($storage);
         if( $storage == 'local') {
             $request = $this->saveFiles($request);
+            //dd( $request);
         } else {
             $request = $this->saveFiles_s3($request);
         }
@@ -886,9 +888,13 @@ class CoursesController extends Controller
             }
         }
 
-        //dd($request->all());
+        //dd( $course, $request->all());
 
+        
         $course->update($request->all());
+
+        $course->is_online = $request->course_type ?? 'Online';
+
         if (($request->slug == "") || $request->slug == null) {
             $course->slug = str_slug($request->title);
             $course->save();

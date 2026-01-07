@@ -247,7 +247,7 @@
                 </div>
             </div>
             <div class="row">
-                <div class="col-sm-12 col-lg-3 col-md-12 form-group">
+                <div class="col-sm-12 col-lg-2 col-md-12 form-group">
                     {!! Form::label('price', trans('labels.backend.courses.fields.price'), [
                         'class' => 'control-label',
                     ]) !!}

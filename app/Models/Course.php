@@ -80,7 +80,7 @@ class Course extends Model
 
         $storage = config('filesystems.default');
         if( $storage == 'local') {
-            return $value;
+            return asset('storage/uploads/' . $value);
         } else {
             return Storage::disk('s3')->temporaryUrl(
                 $value,
