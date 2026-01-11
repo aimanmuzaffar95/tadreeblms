@@ -17,7 +17,7 @@ class CreateCourseModuleWeightagesTable extends Migration
             $table->id();
             $table->foreignId('course_id')->cascadeOnDelete();
             $table->integer('minimun_qualify_marks');
-            //$table->string('module_type');
+            $table->string('module_included');
             $table->string('weightage');
             $table->string('last_module');
             $table->timestamps();

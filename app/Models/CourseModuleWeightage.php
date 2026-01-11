@@ -23,11 +23,26 @@ class CourseModuleWeightage extends Model
         'course_id',
         'minimun_qualify_marks',
         'weightage',
+        'module_included',
         'last_module'
+    ];
+
+    protected $casts = [
+        'weightage' => 'array',
+        'module_included' => 'array',
     ];
 
     public function course()
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function getNormalizedWeightageAttribute()
+    {
+        return [
+            'LessonModule'   => (int) ($this->weightage['LessonModule'] ?? 0),
+            'QuestionModule' => (int) ($this->weightage['QuestionModule'] ?? 0),
+            'FeedbackModule' => (int) ($this->weightage['FeedbackModule'] ?? 0),
+        ];
     }
 }

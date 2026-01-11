@@ -80,6 +80,10 @@
 }
     </style>
 
+    
+
+    @include('backend.includes.partials.course-steps', ['step' => 1, 'course_id' => $course->id, 'course' => $course ])
+
     {!! Form::model($course, ['method' => 'PUT', 'route' => ['admin.courses.update', $course->id], 'files' => true]) !!}
 
     <div>
@@ -350,16 +354,28 @@
             </div>
 
             <div class="row mt-4">
-    <div class="col-sm-12 col-lg-4 col-md-12">
-        <label>@lang('Minimum percentage required to qualify')</label>
-        <input type="number"
-               name="marks_required"
-               value="{{ $course?->latestModuleWeightage?->minimun_qualify_marks ?? '' }}"
-               class="form-control"
-               oninput="this.value=this.value.replace(/[^0-9]/g,''); if(this.value>100)this.value=100;">
-    </div>
+            <div class="col-sm-12 col-lg-4 col-md-12">
+                <label>@lang('Minimum percentage required to qualify')</label>
+                <input readonly disabled type="number"
+                    name="marks_required"
+                    value="{{ $course?->latestModuleWeightage?->minimun_qualify_marks ?? '' }}"
+                    class="form-control"
+                    oninput="this.value=this.value.replace(/[^0-9]/g,''); if(this.value>100)this.value=100;">
+            </div>
 
-    <div class="col-md-12 col-lg-8 form-group">
+            <span>
+                @if($course->latestModuleWeightage?->normalized_weightage['LessonModule'] != 0)
+                Lesson Weightage: {{ $course->latestModuleWeightage?->normalized_weightage['LessonModule'] }} <br />
+                @endif
+                @if($course->latestModuleWeightage?->normalized_weightage['QuestionModule'] != 0)
+                Question Weightage: {{ $course->latestModuleWeightage?->normalized_weightage['QuestionModule'] }} <br />
+                @endif
+                @if($course->latestModuleWeightage?->normalized_weightage['FeedbackModule'] != 0)
+                Feedback Weightage: {{ $course->latestModuleWeightage?->normalized_weightage['FeedbackModule'] }}
+                @endif
+            </span>
+
+    {{-- <div class="col-md-12 col-lg-8 form-group">
         <div class="row">
 
             <div class="col-md-12 d-flex mt-3">
@@ -367,7 +383,7 @@
                 <div class="col-md-6"><strong>Module Weightage (total 100%)</strong></div>
             </div>
 
-            <!-- Lesson Module -->
+           
             <div class="col-md-12 mt-3" id="lesson-module-block">
                 <div class="d-flex">
                     <div class="col-md-6">
@@ -387,7 +403,7 @@
                 </div>
             </div>
 
-            <!-- Question Module -->
+            
             <div class="col-md-12 d-flex mt-3">
                 <div class="col-md-6">
                     <input type="checkbox"
@@ -404,7 +420,7 @@
                 </div>
             </div>
 
-            <!-- Feedback Module -->
+            
             <div class="col-md-12 d-flex mt-3">
                 <div class="col-md-6">
                     <input type="checkbox"
@@ -421,7 +437,7 @@
             </div>
 
         </div>
-    </div>
+    </div> --}}
 </div>
 
 
@@ -468,8 +484,10 @@
                 </div> --}}
 
                 <div class="col-md-12 form-group text-center">
+                    @if( $course->course_image )
                     <img src="{{ $course->course_image }}" height="150px"
                                     width="150px">
+                    @endif
                 </div>
                 
             </div>
@@ -479,6 +497,9 @@
                     <!-- <div class="col-12 text-center form-group">
                                 {!! Form::submit(trans('strings.backend.general.app_save'), ['class' => 'btn btn-lg btn-danger']) !!}
                             </div> -->
+
+                            @if($course->published == 0)
+
                             <div class="form-group">
                                 {!! Form::submit(trans('Save As Draft'), ['class' => 'btn add-btn frm_submit', 'id' => 'doneBtn']) !!}
                             </div>
@@ -488,6 +509,11 @@
                                     'id' => 'nextBtn',
                                 ]) !!}
                             </div>
+                            @else
+                            <div class="form-group">
+                                {!! Form::submit(trans('Update'), ['class' => 'btn add-btn frm_submit', 'id' => 'doneBtn']) !!}
+                            </div>
+                            @endif
     
                 </div>
             </div> 

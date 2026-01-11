@@ -80,6 +80,14 @@
 }
     </style>
 
+    <div id="main-flow">
+        @include('backend.includes.partials.course-steps', ['step' => 1])
+    </div>
+    <div id="online-flow" style="display: none;">
+        @include('backend.includes.partials.course-steps-online', ['step' => 1])
+    </div>
+
+
     {!! Form::open(['route' => ['admin.courses.store'], 'id' => 'addCourse', 'method' => 'POST', 'files' => true]) !!}
 
     <div>
@@ -355,7 +363,7 @@
                     <input type="number" name="marks_required" class="form-control"
                         oninput="this.value = this.value.replace(/[^0-9]/g, ''); if(this.value > 100) this.value = 100; if(this.value < 1 && this.value != '') this.value = 1;">
                 </div>
-                <div class="col-md-12 col-lg-8 form-group" >
+                <div class="col-md-12 col-lg-8 form-group" style="display: none;" >
                     <div class="row">
                         <div class="col-md-12  d-flex mt-3">
                             <div class="col-md-6">
@@ -400,7 +408,7 @@
                         </div>
                         <div class="col-md-12 d-flex mt-3">
                             <div class="col-md-6">
-                        <input class="course-module-inc " type="checkbox"  id="feedbaack-module" name="course_module_inc[]" value="FeedbackModule" /> Feebback Module 
+                        <input class="course-module-inc " checked type="checkbox"  id="feedbaack-module" name="course_module_inc[]" value="FeedbackModule" /> Feebback Module 
                             </div>
                          <div class="col-md-6">
                          <input type="text" class="sm-input text-end" value="" name="course_module_weight[FeedbackModule]" >
@@ -497,7 +505,43 @@
     <script src="/js/helpers/form-submit.js"></script>
     <script>
         
-    
+    // Validate total weightage <= 100
+function validateWeightage() {
+    let total = 0;
+    document.querySelectorAll('.sm-input').forEach(function(input) {
+        let val = parseInt(input.value) || 0;
+        total += val;
+    });
+
+    if (total > 100) {
+        alert('Total module weightage cannot exceed 100%.');
+        return false;
+    }
+    return true;
+}
+
+// Bind to form submit
+$('#addCourse').on('submit', function(e) {
+    if (!validateWeightage()) {
+        e.preventDefault(); // stop submission
+        return false;
+    }
+});
+
+
+document.querySelectorAll('.sm-input').forEach(function(input) {
+    input.addEventListener('input', function() {
+        let total = 0;
+        document.querySelectorAll('.sm-input').forEach(function(i) {
+            total += parseInt(i.value) || 0;
+        });
+        if (total > 100) {
+            input.value = ''; // reset last input
+            alert('Total module weightage cannot exceed 100%');
+        }
+    });
+});
+
 
 
 
@@ -560,6 +604,9 @@
             .find('input')
             .prop('disabled', true);
 
+            $('#main-flow').hide()
+            $('#online-flow').show()
+
     } else if (type === 'Offline') {
         $('#e-learning').hide();
         $('#live-online').show();
@@ -569,6 +616,9 @@
             .hide()
             .find('input')
             .prop('disabled', true);
+
+             $('#main-flow').hide()
+            $('#online-flow').show()
 
     } else {
         // E-Learning
@@ -580,6 +630,9 @@
             .show()
             .find('input')
             .prop('disabled', false);
+
+            $('#main-flow').show()
+            $('#online-flow').hide()
     }
 });
 
@@ -679,7 +732,7 @@
                     error: function(xhr, status, error) {
                         console.log(xhr)
                         res = JSON.parse(xhr.responseText)
-                        alert(res.clientmsg);
+                        //alert(res.clientmsg);
                         let submitbtn = obj.find("[type=submit]");
                         submitbtn.prop("disabled", false);
                         showErrorMessage(obj, xhr)

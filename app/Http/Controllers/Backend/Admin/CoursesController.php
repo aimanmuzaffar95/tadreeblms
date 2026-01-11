@@ -710,16 +710,21 @@ class CoursesController extends Controller
             $course_module_weight = $request->course_module_weight ?? [];
             $last_module_array = $request->course_module_inc ?? ['QuestionModule'];
 
+            //dd($last_module_array);
+
             $last_module = end($last_module_array);
 
-            CourseModuleWeightage::create(
-                [
-                    'course_id' => $course->id,
-                    'minimun_qualify_marks' => $request->marks_required ?? 100,
-                    'weightage' => json_encode($course_module_weight),
-                    'last_module' => $last_module
-                ]
-            );
+            CourseModuleWeightage::create([
+                'course_id' => $course->id,
+                'minimun_qualify_marks' => $request->marks_required ?? 100,
+                'weightage' => [
+                    'LessonModule'   => isset($course_module_weight['LessonModule']) ? (int)$course_module_weight['LessonModule'] : 0,
+                    'QuestionModule' => isset($course_module_weight['QuestionModule']) ? (int)$course_module_weight['QuestionModule'] : 0,
+                    'FeedbackModule' => isset($course_module_weight['FeedbackModule']) ? (int)$course_module_weight['FeedbackModule'] : 0,
+                ],
+                'module_included' => $last_module_array,
+                'last_module' => $last_module,
+            ]);
 
             //dd("jj");
 
@@ -944,6 +949,11 @@ class CoursesController extends Controller
         //dd($request->all());
         $next_btn = $request->submit_btn;
         //dd($next_btn);
+
+        if($course->published == 1) {
+             return redirect()->route('admin.courses.index')->withFlashSuccess(trans('alerts.backend.general.updated'));
+        }
+
         if($next_btn == 'Save As Draft') {
             return redirect()->route('admin.courses.index')->withFlashSuccess(trans('alerts.backend.general.updated'));
             //dd("hh");
@@ -955,6 +965,7 @@ class CoursesController extends Controller
                         ->route('admin.lessons.create', ['course_id' => $course->id])
                         ->withFlashSuccess(trans('alerts.backend.general.updated'));
                 } 
+                
                 
                 return redirect()
                     ->route('admin.test_questions.create', ['course_id' => $course->id])

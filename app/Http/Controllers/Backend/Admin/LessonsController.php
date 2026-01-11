@@ -239,8 +239,12 @@ class LessonsController extends Controller
             return $data;
         }
 
+        $course = Course::with('latestModuleWeightage')->where('id',$course_id)->first();
+
+        //dd( $course);
+
         $courses_all = Course::has('category')->get()->pluck('title', 'category_id')->prepend('Please select', '');
-        return view('backend.lessons.create', compact('courses', 'courses_all', 'temp_id'));
+        return view('backend.lessons.create', compact('courses', 'courses_all', 'temp_id', 'course'));
     }
 
     /**
@@ -421,6 +425,8 @@ class LessonsController extends Controller
             Course::where('id',$request->course_id)->update([
                 'current_step' => 'lesson-added'
             ]);
+
+            $course = Course::with('latestModuleWeightage')->find($request->course_id);
 
             //dd("kk");
 

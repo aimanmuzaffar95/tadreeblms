@@ -201,6 +201,8 @@ class TestQuestionController extends Controller
                 'current_step' => 'question-added'
         ]);
 
+        $course = Course::with('latestModuleWeightage')->where('id', $request->course_id)->first();
+
         // check if the feedback is already added then simple return back;
 
         if(isset($request->temp_id) && $request->action_btn == 'save') {
