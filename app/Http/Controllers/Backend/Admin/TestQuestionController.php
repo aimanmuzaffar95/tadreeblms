@@ -201,11 +201,13 @@ class TestQuestionController extends Controller
                 'current_step' => 'question-added'
         ]);
 
+        //dd($request->action_btn);
+
         $course = Course::with('latestModuleWeightage')->where('id', $request->course_id)->first();
 
         // check if the feedback is already added then simple return back;
 
-        if(isset($request->temp_id) && $request->action_btn == 'save') {
+        if(isset($request->temp_id) && $request->action_btn == 'Next') {
             $test = Test::where('temp_id',$request->temp_id)->where('id',$request->test_id)->first();
             $course_id = $test->course_id ?? null;
             if($course_id) {
@@ -219,7 +221,11 @@ class TestQuestionController extends Controller
             }
         }
 
-        if($request->action_btn == 'save') {
+        if($request->action_btn == 'Save As Draft') {
+            $redirect_url = route('admin.courses.index');
+        }
+
+        if($request->action_btn == 'Next') {
             //$redirect_url = route('admin.assessment_accounts.assignment_create') . '?assis_new&test_id=' . $request->test_id . '&course_id=' . $request->course_id;
             // By pass the asignment part
             
