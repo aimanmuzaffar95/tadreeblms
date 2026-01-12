@@ -280,7 +280,7 @@
                                     'pattern' => '[0-9]',
                                 ]) !!}
                             </div-->
-                <div class="col-sm-12 col-lg-4 col-md-12 form-group">
+                <div class="col-sm-12 col-lg-3 col-md-12 form-group">
                     <div style="margin-bottom: 8px;">
                         Course Image
                     </div>
@@ -298,13 +298,14 @@
                         'class' => 'control-label',
                     ]) !!}
 
-                    {!! Form::text('start_date', old('start_date'), [
-                        'class' => 'form-control date',
-                        'pattern' =>
-                            '(?:19|20)[0-9]{2}-(?:(?:0[1-9]|1[0-2])-(?:0[1-9]|1[0-9]|2[0-9])|(?:(?!02)(?:0[1-9]|1[0-2])-(?:30))|(?:(?:0[13578]|1[02])-31))',
-                        'placeholder' => trans('labels.backend.courses.fields.start_date') . ' (Ex . 2019-01-01)',
-                        'autocomplete' => 'off',
-                    ]) !!}
+                    <input
+                      type="date"
+                      name="start_date"
+                      id="start_date"
+                      class="form-control"
+                      min="{{ date('Y-m-d') }}"
+                      value="{{ old('start_date') }}"
+                    >
 
                 </div>
                 @if (Auth::user()->isAdmin())

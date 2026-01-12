@@ -8,8 +8,8 @@
       enctype="multipart/form-data"
       class="form-horizontal">
     @csrf
-
-    <input type="hidden" name="course_id" value="{{ $course_id }}"/>
+    <input type="hidden" name="course_id" value="{{ $course_id }}" />
+    <div class="card">
 
     <div class="card shadow-sm">
 
@@ -17,98 +17,87 @@
         <div class="card-header">
             <h4 class="mb-0">Final Submission</h4>
         </div>
-        
-        {{-- Body --}}
+
+
+
         <div class="card-body">
 
-            {{-- Course Weightage --}}
-            <div class="mb-4">
-                <h5 class="mb-1">Course Module Weightage</h5>
-                <p class="text-muted mb-4">
-                    Total weightage must be exactly <strong>100%</strong>
-                </p>
+    <!-- Course Weightage -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h5 class="mb-3">Course Module Weightage</h5>
+            <p class="text-muted mb-4">Total weightage must be exactly <strong>100%</strong></p>
+        </div>
 
-                {{-- Minimum Marks --}}
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <label class="form-label">
-                            Minimum percentage required to qualify
-                        </label>
+        <div class="col-md-8">
+
+            @if($course->is_online == 'Online')
+            <div class="form-group row align-items-center mb-3">
+                <label class="col-md-4 col-form-label">
+                    Lesson Module
+                </label>
+                <div class="col-md-8">
+                    <div class="input-group">
                         <input type="number"
-                               name="marks_required"
-                               class="form-control"
-                               min="1"
+                               class="form-control @if($course->is_online == 'Online') module-weight @endif"
+                               name="course_module_weight[LessonModule]"
+                               min="0"
                                max="100"
-                               placeholder="e.g. 60">
-                    </div>
-                </div>
-
-                <hr>
-
-                {{-- Lesson Module --}}
-                @if($course->is_online === 'Online')
-                <div class="row align-items-center mb-3">
-                    <label class="col-md-4 col-form-label">
-                        Lesson Module
-                    </label>
-                    <div class="col-md-4">
-                        <div class="input-group">
-                            <input type="number"
-                                   class="form-control module-weight"
-                                   name="course_module_weight[LessonModule]"
-                                   min="0" max="100"
-                                   placeholder="e.g. 50">
+                               placeholder="e.g. 50">
+                        <div class="input-group-append">
                             <span class="input-group-text">%</span>
                         </div>
                     </div>
                 </div>
-                @endif
+            </div>
+            @endif
 
-                {{-- Question Module --}}
-                <div class="row align-items-center mb-3">
-                    <label class="col-md-4 col-form-label">
-                        Question Module
-                    </label>
-                    <div class="col-md-4">
-                        <div class="input-group">
-                            <input type="number"
-                                   class="form-control module-weight"
-                                   name="course_module_weight[QuestionModule]"
-                                   min="0" max="100"
-                                   placeholder="e.g. 30">
+            <div class="form-group row align-items-center mb-3">
+                <label class="col-md-4 col-form-label">
+                    Question Module
+                </label>
+                <div class="col-md-8">
+                    <div class="input-group">
+                        <input type="number"
+                               class="form-control module-weight"
+                               name="course_module_weight[QuestionModule]"
+                               min="0"
+                               max="100"
+                               placeholder="e.g. 30">
+                        <div class="input-group-append">
                             <span class="input-group-text">%</span>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {{-- Feedback Module --}}
-                <div class="row align-items-center mb-3">
-                    <label class="col-md-4 col-form-label">
-                        Feedback Module
-                    </label>
-                    <div class="col-md-4">
-                        <div class="input-group">
-                            <input type="number"
-                                   class="form-control module-weight"
-                                   name="course_module_weight[FeedbackModule]"
-                                   min="0" max="100"
-                                   placeholder="e.g. 20">
+            <div class="form-group row align-items-center">
+                <label class="col-md-4 col-form-label">
+                    Feedback Module
+                </label>
+                <div class="col-md-8">
+                    <div class="input-group">
+                        <input type="number"
+                               class="form-control module-weight"
+                               name="course_module_weight[FeedbackModule]"
+                               min="0"
+                               max="100"
+                               placeholder="e.g. 20">
+                        <div class="input-group-append">
                             <span class="input-group-text">%</span>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {{-- Total --}}
-                <div class="mt-3">
-                    <strong>Total:</strong>
-                    <span id="totalWeight" class="badge bg-secondary ms-2">
-                        0%
-                    </span>
-                </div>
+            <!-- Total Display -->
+            <div class="mt-3">
+                <strong>Total:</strong>
+                <span id="totalWeight" class="ml-2 badge badge-secondary">0%</span>
+            </div>
 
-                <div id="weightError" class="text-danger mt-2 d-none">
-                    Total weightage must be exactly 100%
-                </div>
+            <div class="text-danger mt-2 d-none" id="weightError">
+                Total weightage must be exactly 100%
             </div>
 
             <hr>
@@ -119,6 +108,15 @@
             </p>
 
         </div>
+    </div>
+
+    <hr>
+
+    <!-- Confirmation -->
+    
+
+</div>
+
 
         {{-- Footer --}}
         <div class="card-footer d-flex justify-content-between">
@@ -135,15 +133,6 @@
     </div>
 </form>
 
-{{-- Styling --}}
-<style>
-    .module-weight {
-        max-width: 120px;
-        text-align: right;
-    }
-</style>
-
-{{-- Script --}}
 <script>
     document.querySelectorAll('.module-weight').forEach(input => {
         input.addEventListener('input', calculateTotal);
@@ -156,18 +145,17 @@
             total += Number(input.value) || 0;
         });
 
-        const badge = document.getElementById('totalWeight');
-        const error = document.getElementById('weightError');
-
-        badge.innerText = total + '%';
+        document.getElementById('totalWeight').innerText = total + '%';
 
         if (total === 100) {
-            badge.className = 'badge bg-success ms-2';
-            error.classList.add('d-none');
+            document.getElementById('totalWeight').className = 'ml-2 badge badge-success';
+            document.getElementById('weightError').classList.add('d-none');
         } else {
-            badge.className = 'badge bg-danger ms-2';
-            error.classList.remove('d-none');
+            document.getElementById('totalWeight').className = 'ml-2 badge badge-danger';
+            document.getElementById('weightError').classList.remove('d-none');
         }
     }
 </script>
+
+
 @stop

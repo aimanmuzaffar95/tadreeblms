@@ -13,6 +13,8 @@
 }
 </style>
 
+
+
 @include('backend.includes.partials.course-steps', ['step' => 3, 'course_id' => $course_id, 'course' => $course ?? null ])
 
 
