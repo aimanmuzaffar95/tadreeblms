@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Helpers\Frontend\Auth\Socialite;
 use App\Events\Frontend\Auth\UserLoggedIn;
 use App\Events\Frontend\Auth\UserLoggedOut;
+use App\Helpers\CustomHelper;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use App\Repositories\Frontend\Auth\UserSessionRepository;
 use Illuminate\Http\Response;
@@ -38,13 +39,12 @@ class LoginController extends Controller
     }
 
     public function refresh_captcha() {
-        $a = rand(1, 9);
-        $b = rand(1, 9);
+        
 
-        session(['captcha_answer' => $a + $b]);
+        $captha_string = CustomHelper::getCaptcha();
 
         return response()->json([
-            'captcha_question' => "$a + $b = ?",
+            'captcha_question' => $captha_string,
         ]);
     }
 
@@ -60,9 +60,12 @@ class LoginController extends Controller
                 'socialLinks' => (new Socialite)->getSocialLinks(),
             ];
         }
-
-        return redirect('/')->with([
-            'show_login' => true,
+        $captha_string = CustomHelper::getCaptcha();
+        // return redirect('/')->with([
+        //     'show_login' => true,
+        // ]);
+        return view('frontend.auth.login', [
+            'captha' => $captha_string
         ]);
     }
 
@@ -115,8 +118,7 @@ class LoginController extends Controller
                 $redirect = route('admin.dashboard');
                  
             } else {
-                $redirect = route('home');
-                
+                $redirect = route('admin.dashboard');
             }
 
            return response([
