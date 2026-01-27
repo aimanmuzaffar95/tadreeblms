@@ -49,12 +49,13 @@
     }
 
     .demo-credentials {
-        padding: 30px;
+        margin-top: 45px;
+        padding: 4px;
         display: flex;
         justify-content: center;
     }
 
-    h3 {
+    .demo-credentials h3 {
         font-size: 18px;
         padding: 10px;
         font-weight: bold;
@@ -168,10 +169,10 @@
                     </div>
                 @endif
 
-                <div class="demo-credentials">
+                {{-- <div class="demo-credentials">
                     <h3>Demo credentials</h3>
                     <p>Email: demo@tadreeblms.com <br/> Password: demo12345</p>
-                </div>
+                </div> --}}
 
             </div>
 
