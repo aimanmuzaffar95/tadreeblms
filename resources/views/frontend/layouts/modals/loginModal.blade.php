@@ -154,7 +154,7 @@
                     <h2>@lang('Register')</h2>
                     <p>@lang('Please register yourself')</p>
                     {{-- {{ $default_admin_email }} --}}
-                    @if($default_admin_email->email == 'demo@tadreeblms.com')
+                    @if($default_admin_email->email == env('DEMO_EMAIL', 'admin@seeder.com'))
                     <p>@lang('Please register an user as administrator')</p>
                     @endif
                 </div>
