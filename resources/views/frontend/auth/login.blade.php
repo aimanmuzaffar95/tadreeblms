@@ -171,7 +171,7 @@
 
                 <div class="demo-credentials">
                     <h3>Demo credentials</h3>
-                    <p>Email: demo@tadreeblms.com <br/> Password: demo12345</p>
+                    <p>Email: {{ env('DEMO_EMAIL', 'demo@admin.com') }} <br/> Password: {{ env('DEMO_PASSWORD', 'secret') }}</p>
                 </div>
 
             </div>

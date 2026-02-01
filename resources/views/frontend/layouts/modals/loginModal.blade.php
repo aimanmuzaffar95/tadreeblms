@@ -154,7 +154,7 @@
                     <h2>@lang('Register')</h2>
                     <p>@lang('Please register yourself')</p>
                     {{-- {{ $default_admin_email }} --}}
-                    @if($default_admin_email->email == env('DEMO_EMAIL', 'admin@seeder.com'))
+                    @if($default_admin_email->email == env('DEMO_EMAIL', 'demo@admin.com'))
                     <p>@lang('Please register an user as administrator')</p>
                     @endif
                 </div>
@@ -170,7 +170,7 @@
                         <span class="success-response text-success">{{ session()->get('flash_success') }}</span>
                         <form id="registerForm" class="contact_form" method="POST" action="#">
                             @csrf
-                            @if($default_admin_email->email == 'admin@seeder.com')
+                            @if($default_admin_email->email == env('DEMO_EMAIL', 'demo@admin.com'))
                             <input type="hidden" name="default_admin" value="1" />
                             @endif
 
