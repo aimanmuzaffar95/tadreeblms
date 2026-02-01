@@ -5,7 +5,7 @@
 /vendor/
 /node_modules/
 
-/ldap
+
 
 .composer/
 /installed
