@@ -169,10 +169,10 @@
                     </div>
                 @endif
 
-                {{-- <div class="demo-credentials">
+                <div class="demo-credentials">
                     <h3>Demo credentials</h3>
                     <p>Email: demo@tadreeblms.com <br/> Password: demo12345</p>
-                </div> --}}
+                </div>
 
             </div>
 
