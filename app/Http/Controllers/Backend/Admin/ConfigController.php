@@ -20,7 +20,7 @@ use App\Models\AdminMenuItem;
 use App\Models\Slider;
 use Harimayco\Menu\Models\Menus;
 use Illuminate\Support\Facades\Artisan;
-
+use LdapRecord\Container;
 class ConfigController extends Controller
 {
     use FileUploadTrait;
@@ -185,6 +185,94 @@ class ConfigController extends Controller
         $slides_list = Slider::OrderBy('sequence','asc')->get();
 
         return view('backend.settings.landing_page_setting', compact('landing_page_toggle','slides_list','menu', 'menu_data', 'menu_list', 'pages','logo_data', 'sections', 'footer_data', 'app_locales', 'api_clients', 'our_vision', 'our_mission'));
+    }
+
+    
+    public function getLdapSettings(Request $request)
+    {
+        if (!auth()->user()->isAdmin()) {
+            return abort(403);
+        }
+        $lang = request()->lang ?? 'en';
+        $type = config('theme_layout');
+        $sections = Config::where('key', '=', 'layout_' . $type)->first();
+        $footer_data = Config::where('key', '=', 'footer_data')->first();
+
+        $logo_data = Config::where('key', '=', 'site_logo')->first();
+
+        $ldap_toggle = Config::where('key', 'ldap_toggle')->value('value') ?? 0;
+
+        $ldap_connected = Config::where('key', 'ldap_connected')->value('value') ?? 0;
+
+        $footer_data = json_decode($footer_data->value);
+        $sections = json_decode($sections->value);
+        $app_locales = Locale::get();
+        $api_clients = OauthClient::paginate(10);
+        $our_vision = Config::where('key', '=', 'our_vision')->where('lang', $lang)->first();
+        if (!$our_vision) {
+            $our_vision = Config::create(['key' => 'our_vision', 'lang' => 'ar']);
+        }
+        $our_mission = Config::where('key', '=', 'our_mission')->where('lang', $lang)->first();
+        if (!$our_mission) {
+            $our_mission = Config::create(['key' => 'our_mission', 'lang' => 'ar']);
+        }
+
+         $menu = Null;
+        $menu_data = Null;
+        if ($request->menu) {
+            $menu = Menus::find($request->menu);
+            $menu_data = json_decode($menu->value);
+        }
+
+        $menu_list = Menus::get();
+
+        //dd( $menu_list );
+
+        $pages = Page::where('published', '=', 1)->get();
+
+        $slides_list = Slider::OrderBy('sequence','asc')->get();
+
+        return view('backend.settings.ldap_setting', compact('ldap_connected', 'ldap_toggle','slides_list','menu', 'menu_data', 'menu_list', 'pages','logo_data', 'sections', 'footer_data', 'app_locales', 'api_clients', 'our_vision', 'our_mission'));
+    }
+
+    
+
+    public function saveLdapSettings(Request $request)
+    {
+
+        $ldap_toggle = $request->has('ldap_toggle') ? 1 : 0;
+
+        if($ldap_toggle) {
+            try {
+                Container::getConnection()->connect();
+                $connected = true;
+                $connection_msg = "LDAP connected successfully from LMS!";
+            } catch (\Exception $e) {
+                $connected = false;
+                $connection_msg = "LDAP connection failed: " . $e->getMessage();
+            }
+        } else {
+            $connected = false;
+        }
+        
+       
+        
+        
+        
+
+
+        Config::updateOrCreate(
+            ['key' => 'ldap_toggle'],
+            ['value' => $ldap_toggle]
+        );
+
+        Config::updateOrCreate(
+            ['key' => 'ldap_connected'],
+            ['value' => $connected]
+        );
+            
+
+        return back()->withFlashSuccess(__('alerts.backend.general.updated'));
     }
 
     public function getSocialSettings()

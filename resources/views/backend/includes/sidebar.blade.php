@@ -651,6 +651,13 @@
                     </li>
 
                     <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('admin.ldap-user-listing') ? 'active' : '' }}"
+                            href="{{ route('admin.ldap-user-listing') }}">
+                            @lang('LDAP User List ')
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
                         <a class="nav-link {{ $request->segment(2) == 'roles' ? 'active' : '' }}"
                             href="{{ route('admin.roles.index') }}">
 
@@ -695,6 +702,13 @@
                         <a class="nav-link {{ active_class(Active::checkUriPattern('admin/landing-page-setting')) }}"
                             href="{{ route('admin.landing-page-setting') }}">
                             <span class="title">@lang('menus.backend.sidebar.settings.landing_page_setting')</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item ">
+                        <a class="nav-link {{ active_class(Active::checkUriPattern('admin/ldap-setting')) }}"
+                            href="{{ route('admin.ldap-setting') }}">
+                            <span class="title">@lang('LDAP Setting')</span>
                         </a>
                     </li>
 
