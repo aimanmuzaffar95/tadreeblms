@@ -97,6 +97,7 @@
     93 => 'App\\Providers\\EventServiceProvider',
     94 => 'App\\Providers\\ObserverServiceProvider',
     95 => 'App\\Providers\\RouteServiceProvider',
+    96 => 'LdapRecord\\Laravel\\LdapServiceProvider',
   ),
   'eager' => 
   array (
@@ -176,6 +177,7 @@
     73 => 'App\\Providers\\EventServiceProvider',
     74 => 'App\\Providers\\ObserverServiceProvider',
     75 => 'App\\Providers\\RouteServiceProvider',
+    76 => 'LdapRecord\\Laravel\\LdapServiceProvider',
   ),
   'deferred' => 
   array (
