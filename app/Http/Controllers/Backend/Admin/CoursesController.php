@@ -293,7 +293,12 @@ class CoursesController extends Controller
             //     return $view;
             // })
             ->addColumn('actions', function ($q) use ($has_view, $has_edit, $has_delete, $request) {
-        $actions = '<div class="actionbtns">
+        $actions = '<div class="actionbtns"> 
+        <div class="dropdown">
+                    <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="fa fa-ellipsis-v"></i>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-right">
         
         ';
 
@@ -335,7 +340,7 @@ class CoursesController extends Controller
             ->render();
     }
 
-    $actions .= '</div>';
+    $actions .= '</div></div></div>';
 
     // Wrap all actions in dropdown
     return $actions;
@@ -534,7 +539,8 @@ class CoursesController extends Controller
             return abort(401);
         }
         $request->validate([
-            'start_date' => 'required|date|after_or_equal:today',
+             'start_date' => 'required|date',
+    'expire_at'  => 'required|date|after_or_equal:start_date',
         ]);
         DB::beginTransaction();
 
