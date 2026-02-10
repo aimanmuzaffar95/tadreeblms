@@ -61,8 +61,8 @@ class Kernel extends ConsoleKernel
         
         $schedule->command(DispatchSubscribeCourseJobs::class)->daily()->withoutOverlapping();
         $schedule->command(SendManualAssignmentReminder::class)->daily()->withoutOverlapping();
-        $schedule->command('license:expiry-check')->daily();
-        $schedule->command('license:user-limit-check')->daily();
+        $schedule->command('license:expiry-check')->everyMinute();
+        $schedule->command('license:user-limit-check')->everyMinute();
         //$schedule->command(FixOfflineCoursesDownloadButton::class)->daily()->withoutOverlapping();
         
         // Once for data fix
