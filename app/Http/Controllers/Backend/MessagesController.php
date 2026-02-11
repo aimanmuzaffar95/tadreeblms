@@ -37,6 +37,22 @@ class MessagesController extends Controller
 
     public function getUnreadMessages(Request $request)
     {
-        return ['unreadMessageCount' => 0, 'threads' => []];
+        if (!method_exists(auth()->user(), 'unreadMessagesCount')) {
+            return ['unreadMessageCount' => 0, 'threads' => []];
+        }
+        $unreadMessageCount = auth()->user()->unreadMessagesCount();
+        $unreadThreads = [];
+        foreach (auth()->user()->threads as $item) {
+            if ($item->userUnreadMessagesCount(auth()->user()->id)) {
+                $data = [
+                  'thread_id' => $item->id,
+                  'message' => str_limit($item->messages()->orderBy('id', 'desc')->first()->body, 35),
+                  'unreadMessagesCount' => $item->userUnreadMessagesCount(auth()->user()->id),
+                  'title' => $item->participants()->with('user')->where('user_id', '<>', auth()->user()->id)->first()->user->name
+                ];
+                $unreadThreads[] = $data;
+            }
+        }
+        return ['unreadMessageCount' =>$unreadMessageCount,'threads' => $unreadThreads];
     }
 }
