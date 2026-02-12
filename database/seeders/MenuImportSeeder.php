@@ -13,10 +13,10 @@ class MenuImportSeeder extends Seeder
      */
     public function run()
     {
-        $menus = \Harimayco\Menu\Models\Menus::all();
+        $menus = \Bdhabib\LaravelMenu\Models\Menus::all();
         foreach ($menus as $menu) {
             if ($menu != NULL) {
-                $menuItems = \Harimayco\Menu\Models\MenuItems::where('menu', '=', $menu->id)->get();
+                $menuItems = \Bdhabib\LaravelMenu\Models\MenuItems::where('menu', '=', $menu->id)->get();
                 if ($menuItems != null) {
                     $allMenu = [];
                     foreach ($menuItems as $item) {
