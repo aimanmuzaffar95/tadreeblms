@@ -29,6 +29,17 @@
       0 => 'Barryvdh\\TranslationManager\\ManagerServiceProvider',
     ),
   ),
+  'bdhabib/laravel-menu' => 
+  array (
+    'aliases' => 
+    array (
+      'LaravelMenu' => 'Bdhabib\\LaravelMenu\\Facades\\LaravelMenu',
+    ),
+    'providers' => 
+    array (
+      0 => 'Bdhabib\\LaravelMenu\\LaravelMenuServiceProvider',
+    ),
+  ),
   'creativeorange/gravatar' => 
   array (
     'aliases' => 
