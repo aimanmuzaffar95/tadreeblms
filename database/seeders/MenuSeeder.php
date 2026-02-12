@@ -79,9 +79,9 @@ class MenuSeeder extends Seeder
                 if ($menuItems != null) {
                     $allMenu = [];
                     foreach ($menuItems as $item) {
-                        $allMenu[str_slug($item['label'])] = $item['label'];
+                        $allMenu[\Illuminate\Support\Str::slug($item['label'])] = $item['label'];
                     }
-                    $main[str_slug($menu->name)] = $allMenu;
+                    $main[\Illuminate\Support\Str::slug($menu->name)] = $allMenu;
                     $file = fopen(public_path('../resources/lang/en/custom-menu.php'), 'a');
                     if ($file !== false) {
                         ftruncate($file, 0);
