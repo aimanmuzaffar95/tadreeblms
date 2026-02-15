@@ -149,12 +149,13 @@ class DepartmentController extends Controller
         }else{
             $page->slug = $request->slug;
         }
-        $message = $request->get('content');
-        $dom = new \DOMDocument();
-        $dom->loadHtml(mb_convert_encoding($message,  'HTML-ENTITIES', 'UTF-8'), LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        $page->content = $request->content;
+        // $message = $request->get('content');
+        // $dom = new \DOMDocument();
+        // $dom->loadHtml(mb_convert_encoding($message,  'HTML-ENTITIES', 'UTF-8'), LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
 
 
-        $page->content = $dom->saveHTML();
+        // $page->content = $dom->saveHTML();
 
 
         $page->user_id = auth()->user()->id;
@@ -221,13 +222,13 @@ class DepartmentController extends Controller
         }else{
             $page->slug = $request->slug;
         }
+        $page->content = $request->content;
+        // $message = $request->get('content');
+        // libxml_use_internal_errors(true);
+        // $dom = new \DOMDocument();
+        // $dom->loadHtml(mb_convert_encoding($message,  'HTML-ENTITIES', 'UTF-8'));
 
-        $message = $request->get('content');
-        libxml_use_internal_errors(true);
-        $dom = new \DOMDocument();
-        $dom->loadHtml(mb_convert_encoding($message,  'HTML-ENTITIES', 'UTF-8'));
-
-        $page->content = $dom->saveHTML();
+        // $page->content = $dom->saveHTML();
 
 
         $page->meta_title = $request->meta_title;

@@ -66,12 +66,12 @@
                     </div>
 
                 </div>
-
+                
 
                 <div class="row">
                     <div class="col-12 form-group">
                         <label for="content" class="control-label">Description</label>
-                        <textarea class="form-control editor" placeholder="Title" name="content" type="text" id="editor">{{ old('content') }}</textarea>
+                        <textarea class="form-control" placeholder="Enter description" name="content" rows="4">{{ old('content') }}</textarea>
 
                     </div>
                 </div>

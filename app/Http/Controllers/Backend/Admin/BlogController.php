@@ -113,7 +113,7 @@ class BlogController extends Controller
 
     if ($has_edit) {
         $edit .= view('backend.datatable.action-edit')
-            ->with(['route' => route('admin.blogs.edit', ['blog' => $q->id])])
+            ->with(['route' => route('admin.blogs.edit', ['id' => $q->id])])
             ->render();
     }
 
