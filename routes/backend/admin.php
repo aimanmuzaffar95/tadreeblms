@@ -500,7 +500,7 @@ Route::delete('pages_perma_del/{id}', ['uses' => 'Admin\PageController@perma_del
 Route::resource('reasons', 'Admin\ReasonController');
 Route::get('get-reasons-data', ['uses' => 'Admin\ReasonController@getData', 'as' => 'reasons.get_data']);
 Route::post('reasons_mass_destroy', ['uses' => 'Admin\ReasonController@massDestroy', 'as' => 'reasons.mass_destroy']);
-Route::get('reasons/status/{id}', 'Admin\ReasonController@status')->name('reasons.status');
+Route::get('reasons/status/{id}', 'Admin\ReasonController@status')->name('reasons.status.get');
 Route::post('reasons/status', ['uses' => 'Admin\ReasonController@updateStatus', 'as' => 'reasons.status']);
 
 
@@ -633,7 +633,7 @@ Route::get('news-edit/{page}', 'Admin\NewsController@edit')->name('news.edit');
 Route::post('news-update/{page}', 'Admin\NewsController@update')->name('news.update');
 Route::get('get-news-data', ['uses' => 'Admin\NewsController@getData', 'as' => 'news.get_data']);
 Route::delete('news_mass_destroy/{page}', ['uses' => 'Admin\NewsController@destroy', 'as' => 'news.destroy']);
-Route::get('news/status/{id}', 'Admin\NewsController@status')->name('news.status');
+Route::get('news/status/{id}', 'Admin\NewsController@status')->name('news.status.get');
 Route::post('news/status', ['uses' => 'Admin\NewsController@updateStatus', 'as' => 'news.status']);
 
 // Latest Events
@@ -645,7 +645,7 @@ Route::get('events-edit/{page}', 'Admin\EventsController@edit')->name('events.ed
 Route::post('events-update/{page}', 'Admin\EventsController@update')->name('events.update');
 Route::get('get-events-data', ['uses' => 'Admin\EventsController@getData', 'as' => 'events.get_data']);
 Route::delete('events_mass_destroy/{page}', ['uses' => 'Admin\EventsController@destroy', 'as' => 'events.destroy']);
-Route::get('events/status/{id}', 'Admin\EventsController@status')->name('events.status');
+Route::get('events/status/{id}', 'Admin\EventsController@status')->name('events.status.get');
 Route::post('events/status', ['uses' => 'Admin\EventsController@updateStatus', 'as' => 'events.status']);
 
 // Latest Libraries
@@ -657,7 +657,7 @@ Route::get('libraries-edit/{page}', 'Admin\LibraryController@edit')->name('libra
 Route::post('libraries-update/{page}', 'Admin\LibraryController@update')->name('libraries.update');
 Route::get('get-libraries-data', ['uses' => 'Admin\LibraryController@getData', 'as' => 'libraries.get_data']);
 Route::delete('libraries_mass_destroy/{page}', ['uses' => 'Admin\LibraryController@destroy', 'as' => 'libraries.destroy']);
-Route::get('libraries/status/{id}', 'Admin\LibraryController@status')->name('libraries.status');
+Route::get('libraries/status/{id}', 'Admin\LibraryController@status')->name('libraries.status.get');
 Route::post('libraries/status', ['uses' => 'Admin\LibraryController@updateStatus', 'as' => 'libraries.status']);
 
 
@@ -670,7 +670,7 @@ Route::get('announcement-edit/{page}', 'Admin\AnnouncementController@edit')->nam
 Route::post('announcement-update/{page}', 'Admin\AnnouncementController@update')->name('announcement.update');
 Route::get('get-announcement-data', ['uses' => 'Admin\AnnouncementController@getData', 'as' => 'announcement.get_data']);
 Route::delete('announcement_mass_destroy/{page}', ['uses' => 'Admin\AnnouncementController@destroy', 'as' => 'announcement.destroy']);
-Route::get('announcement/status/{id}', 'Admin\AnnouncementController@status')->name('announcement.status');
+Route::get('announcement/status/{id}', 'Admin\AnnouncementController@status')->name('announcement.status.get');
 Route::post('announcement/status', ['uses' => 'Admin\AnnouncementController@updateStatus', 'as' => 'announcement.status']);
 
 // Student Feedback
