@@ -563,8 +563,40 @@ class CoursesController extends Controller
         }
         $request->validate([
              'start_date' => 'required|date',
-    'expire_at'  => 'required|date|after_or_equal:start_date',
+             'expire_at'  => 'required|date|after_or_equal:start_date',
         ]);
+
+        if ($request->course_type === 'Offline' && in_array($request->meeting_provider, ['zoom', 'google_meet'])) {
+            $request->validate([
+                'meeting_start_at' => 'required|date|after:now',
+                'meeting_duration' => 'required|integer|min:1',
+            ], [
+                'meeting_start_at.after' => 'Meeting start date must be from the current date and time must be from the current time. Past time is not allowed.',
+            ]);
+
+            $teachers = \Auth::user()->isAdmin() ? array_filter((array)$request->input('teachers')) : [\Auth::user()->id];
+            $meetingStart = \Carbon\Carbon::parse($request->meeting_start_at);
+            // Cast meeting_duration to int to avoid TypeError in Carbon::addUnit
+            $meetingDuration = (int)$request->meeting_duration;
+            $meetingEnd = $meetingStart->copy()->addMinutes($meetingDuration);
+
+            $overlappingMeetings = \DB::table('courses')
+                ->join('course_user', 'courses.id', '=', 'course_user.course_id')
+                ->whereIn('course_user.user_id', $teachers)
+                ->whereNotNull('courses.meeting_start_at')
+                ->whereNotNull('courses.meeting_duration')
+                ->where(function ($query) use ($meetingStart, $meetingEnd) {
+                    $query->whereRaw('? < DATE_ADD(courses.meeting_start_at, INTERVAL courses.meeting_duration MINUTE)', [$meetingStart])
+                          ->whereRaw('? > courses.meeting_start_at', [$meetingEnd]);
+                })
+                ->exists();
+
+            if ($overlappingMeetings) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'meeting_start_at' => ['Overlapping date, time, and duration for the same teacher is not allowed.']
+                ]);
+            }
+        }
         DB::beginTransaction();
 
         try {
@@ -797,24 +829,6 @@ class CoursesController extends Controller
 
             $course->teachers()->sync($teachers);
 
-            // Trainer assigned notification
-            try {
-                $notificationSettings = app(NotificationSettingsService::class);
-                if ($notificationSettings->shouldNotify('trainers', 'trainer_assigned', 'email')) {
-                    foreach ($teachers as $teacherId) {
-                        if ($teacherId != \Auth::id()) {
-                            $trainer = User::find($teacherId);
-                            if ($trainer) {
-                                CourseNotification::sendTrainerAssignedEmail($trainer, $course, \Auth::user());
-                                CourseNotification::createTrainerAssignedBell($trainer, $course, \Auth::user());
-                            }
-                        }
-                    }
-                }
-            } catch (\Exception $e) {
-                \Log::error('Failed to send trainer assigned notification: ' . $e->getMessage());
-            }
-
             $internalStudents = \Auth::user()->isAdmin() ? (array)$request->input('internalStudents') : [\Auth::user()->id];
             $externalStudents = \Auth::user()->isAdmin() ? (array)$request->input('externalStudents') : [\Auth::user()->id];
 
@@ -848,11 +862,30 @@ class CoursesController extends Controller
                 if ($meetingData) {
                     $course->fill($meetingData)->save();
                     // $this->sendMeetingInviteToStudents($course, $students);
-                    $this->sendMeetingInviteToTeachers($course, $teachers);
+                    // $this->sendMeetingInviteToTeachers($course, $teachers); // Replaced by Trainer assigned notification
                 } else {
                     \Session::flash('flash_danger', 'Course saved successfully, but the meeting provider ('.$request->meeting_provider.') failed to create the meeting. Please verify that your credentials are correct and have the required scopes (e.g. meeting:write:admin for Zoom).');
                 }
             }
+
+            // Trainer assigned notification
+            try {
+                $notificationSettings = app(NotificationSettingsService::class);
+                if ($notificationSettings->shouldNotify('trainers', 'trainer_assigned', 'email')) {
+                    foreach ($teachers as $teacherId) {
+                        if ($teacherId != \Auth::id()) {
+                            $trainer = User::find($teacherId);
+                            if ($trainer) {
+                                CourseNotification::sendTrainerAssignedEmail($trainer, $course, \Auth::user());
+                                CourseNotification::createTrainerAssignedBell($trainer, $course, \Auth::user());
+                            }
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::error('Failed to send trainer assigned notification: ' . $e->getMessage());
+            }
+
             
             //dd($redirect_url);
             
@@ -942,6 +975,43 @@ class CoursesController extends Controller
         $slug_lesson = Course::where('slug', '=', $slug)->where('id', '!=', $course->id)->first();
         if ($slug_lesson != null) {
             return back()->withFlashDanger(__('alerts.backend.general.slug_exist'));
+        }
+
+        if ($request->course_type === 'Offline' && in_array($request->meeting_provider, ['zoom', 'google_meet'])) {
+            $request->validate([
+                'meeting_start_at' => 'required|date|after:now',
+                'meeting_duration' => 'required|integer|min:1',
+            ], [
+                'meeting_start_at.after' => 'Meeting start date must be from the current date and time must be from the current time. Past time is not allowed.',
+            ]);
+
+            // For update, the request might contain teachers -> fallback to auth user if admin
+            $teachers = \Auth::user()->isAdmin() ? array_filter((array)$request->input('teachers')) : [\Auth::user()->id];
+            // If empty (teachers not passed in request), try to grab existing teachers
+            if(empty($teachers)){
+               $teachers = $course->teachers->pluck('id')->toArray();
+            }
+
+            $meetingStart = \Carbon\Carbon::parse($request->meeting_start_at);
+            // Cast meeting_duration to int to avoid TypeError in Carbon::addUnit
+            $meetingDuration = (int)$request->meeting_duration;
+            $meetingEnd = $meetingStart->copy()->addMinutes($meetingDuration);
+
+            $overlappingMeetings = \DB::table('courses')
+                ->join('course_user', 'courses.id', '=', 'course_user.course_id')
+                ->whereIn('course_user.user_id', $teachers)
+                ->where('courses.id', '!=', $course->id)
+                ->whereNotNull('courses.meeting_start_at')
+                ->whereNotNull('courses.meeting_duration')
+                ->where(function ($query) use ($meetingStart, $meetingEnd) {
+                    $query->whereRaw('? < DATE_ADD(courses.meeting_start_at, INTERVAL courses.meeting_duration MINUTE)', [$meetingStart])
+                          ->whereRaw('? > courses.meeting_start_at', [$meetingEnd]);
+                })
+                ->exists();
+
+            if ($overlappingMeetings) {
+                return back()->withFlashDanger('Overlapping date, time, and duration for the same teacher is not allowed.')->withInput();
+            }
         }
 
 
@@ -1623,12 +1693,4 @@ class CoursesController extends Controller
         }
     }
 
-    private function sendMeetingInviteToTeachers(Course $course, array $teacherIds): void
-    {
-        $teachers = User::whereIn('id', $teacherIds)->get();
-        foreach ($teachers as $teacher) {
-            \Illuminate\Support\Facades\Mail::to($teacher->email)
-                ->send(new \App\Mail\CourseMeetingHostInvite($course));
-        }
-    }
 }
