@@ -1017,10 +1017,8 @@ class CoursesController extends Controller
 
 
         $storage = config('filesystems.default');
-        //dd($storage);
         if( $storage == 'local') {
             $request = $this->saveFiles($request);
-            //dd( $request);
         } else {
             $request = $this->saveFiles_s3($request);
         }
