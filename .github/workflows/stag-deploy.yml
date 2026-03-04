@@ -20,4 +20,5 @@ jobs:
             echo "Connected to staging"
             cd /var/www/html/stag/tadreeblms
             git pull --ff-only origin Staging
+            php artisan migrate
             echo "Staging deployment completed"
