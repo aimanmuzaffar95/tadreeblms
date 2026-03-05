@@ -68,9 +68,34 @@ class ExternalAppsController extends Controller
             $zipFile         = $request->file('zip_file');
             $originalFileName = $zipFile->getClientOriginalName();
 
-            $result = $this->externalAppService->uploadAndInstall($zipFile, $originalFileName);
+           
+            
+
+            // Auto-collect module name from zip file name if not provided
+            if (! $zipFile) {
+                $fileName   = $zipFile->getClientOriginalName();
+                $moduleName = pathinfo($fileName, PATHINFO_FILENAME);
+                $moduleName = \Illuminate\Support\Str::slug($moduleName);
+            }
+
+            //dd( $zipFile, $moduleName);
+
+            if (empty($moduleName)) {
+                return redirect()->back()->with('error', 'Could not determine module name from file name. Please rename the file and try again.');
+            }
+
+            $result = $this->externalAppService->uploadAndInstall($zipFile, $moduleName);
+            //dd( $result );
 
             if ($result['success']) {
+                try {
+                $migrationOutput = $this->externalAppService->runModuleMigrations($moduleName);
+                    Log::info("Module migrations executed for $moduleName", ['output' => $migrationOutput]);
+                } catch (\Exception $e) {
+                    Log::error("Failed to run module migrations for $moduleName", ['error' => $e->getMessage()]);
+                    // Optional: You can return an error or just log
+                    // return redirect()->back()->with('error', 'Module installed but migrations failed: ' . $e->getMessage());
+                }
                 return redirect()->route('admin.external-apps.index')
                     ->with('success', $result['message']);
             } else {
@@ -148,12 +173,15 @@ class ExternalAppsController extends Controller
      */
     public function editConfig($slug)
     {
+        //dd($slug);
         if (!auth()->user()->isAdmin()) {
             return abort(403);
         }
 
         $app       = $this->externalAppService->getApp($slug);
+        //dd( $app );
         $moduleEnv = $this->externalAppService->getModuleEnvAll($slug);
+        //dd(  $app, $moduleEnv );
 
         return view('backend.settings.external-apps.configure', compact('app', 'moduleEnv'));
     }

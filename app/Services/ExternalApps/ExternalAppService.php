@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use ZipArchive;
-
+use Illuminate\Support\Facades\Artisan;
 class ExternalAppService
 {
     protected $appStoragePath;
@@ -314,6 +314,28 @@ class ExternalAppService
     // CRUD Operations
     // -------------------------------------------------------------------------
 
+    public function runModuleMigrations(string $slug)
+    {
+        $moduleMigrationsPath = base_path("modules/{$slug}/database/migrations");
+        //dd($moduleMigrationsPath);
+
+        if (!file_exists($moduleMigrationsPath)) {
+            throw new \Exception("Migrations folder not found for module: $slug");
+        }
+
+        
+
+        // Run migrations
+        Artisan::call('migrate', [
+            '--path' => "modules/{$slug}/database/migrations",
+            '--force' => true, // force run in production
+        ]);
+
+        $output = Artisan::output();
+        //dd($output);
+        return $output;
+    }
+
     /**
      * Upload and extract external app zip file.
      * The module slug is auto-detected from the zip filename keywords
@@ -386,6 +408,7 @@ class ExternalAppService
                 throw new \Exception('Could not determine module name from zip file or config.json.');
             }
 
+            
             // Create the final installation directory
             $installPath = $this->appStoragePath . '/' . $moduleName;
 
@@ -428,6 +451,8 @@ class ExternalAppService
                     'last_updated_at' => now(),
                 ]
             );
+
+            //dd($externalApp);
 
             // Create the module's .env file (with empty credential keys)
             $this->createModuleDotEnv($moduleName, $moduleConfig);
@@ -517,6 +542,7 @@ class ExternalAppService
      */
     protected function validateModuleStructure($modulePath)
     {
+        //dd($modulePath);
         $requiredFiles = [
             'config.json',
             'install.php',
