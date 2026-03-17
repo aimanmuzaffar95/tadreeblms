@@ -6,6 +6,8 @@ use App\Models\ExternalApp;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use ZipArchive;
 
 class ExternalAppService
@@ -125,6 +127,12 @@ class ExternalAppService
     {
         $path = $this->moduleDotEnvPath($slug);
 
+        // Ensure the module directory exists before writing the .env file
+        $dir = dirname($path);
+        if (!File::exists($dir)) {
+            File::makeDirectory($dir, 0755, true);
+        }
+
         $envContent = File::exists($path) ? File::get($path) : '';
 
         foreach ($data as $key => $value) {
@@ -161,6 +169,12 @@ class ExternalAppService
         // Don't overwrite so that re-installs keep saved credentials
         if (File::exists($path)) {
             return;
+        }
+
+        // Ensure the module directory exists
+        $dir = dirname($path);
+        if (!File::exists($dir)) {
+            File::makeDirectory($dir, 0755, true);
         }
 
         $fields = $moduleConfig['metadata']['fields'] ?? [];
@@ -227,39 +241,33 @@ class ExternalAppService
     }
 
     /**
-     * Dispatch a background job to sync one test file from local uploads/ to S3.
+     * Queue individual jobs to sync local uploads to S3.
      */
-    protected function dispatchTestFileSync(): void
+    protected function dispatchUploadsToS3(): int
     {
         $uploadsDir = public_path('storage/uploads');
 
         if (!File::exists($uploadsDir)) {
-            Log::info('dispatchTestFileSync: No uploads directory found, skipping.');
-            return;
+            return 0;
         }
 
-        // Pick the first file in uploads/
-        $files = File::files($uploadsDir);
+        $files = File::allFiles($uploadsDir);
+        $count = 0;
 
-        if (empty($files)) {
-            Log::info('dispatchTestFileSync: No files in uploads/, skipping.');
-            return;
+        foreach ($files as $file) {
+            $relativePath = str_replace('\\', '/', $file->getRelativePathname());
+            \App\Jobs\SyncLocalFileToS3Job::dispatch($file->getPathname(), 'uploads/' . $relativePath);
+            $count++;
         }
 
-        $file = $files[0];
-        $localPath = $file->getPathname();
-        $s3Path = 'uploads/' . $file->getFilename();
-
-        \App\Jobs\SyncLocalFileToS3Job::dispatch($localPath, $s3Path);
-
-        Log::info("dispatchTestFileSync: Queued {$s3Path} for S3 upload.");
+        Log::info("SyncUploadsToS3: Queued {$count} file(s).");
+        return $count;
     }
 
     /**
-     * Dispatch a background job to download one test file from S3 back to local.
-     * Uses the same first file that dispatchTestFileSync would have uploaded.
+     * Queue individual jobs to download S3 files to local uploads.
      */
-    protected function dispatchTestFileDownload(): void
+    protected function dispatchS3ToUploads(): int
     {
         $uploadsDir = public_path('storage/uploads');
 
@@ -267,21 +275,23 @@ class ExternalAppService
             File::makeDirectory($uploadsDir, 0777, true);
         }
 
-        // Pick the first file in uploads/ to know what was synced
-        $files = File::files($uploadsDir);
-
-        if (empty($files)) {
-            Log::info('dispatchTestFileDownload: No files in uploads/ to reference, skipping.');
-            return;
+        try {
+            $s3Files = Storage::disk('s3')->allFiles('uploads');
+        } catch (\Exception $e) {
+            Log::warning('SyncS3ToUploads: Could not list S3 — ' . $e->getMessage());
+            return 0;
         }
 
-        $file = $files[0];
-        $s3Path = 'uploads/' . $file->getFilename();
-        $localPath = $uploadsDir . '/' . $file->getFilename();
+        $count = 0;
+        foreach ($s3Files as $s3Path) {
+            $relativePath = ltrim(substr($s3Path, strlen('uploads')), '/');
+            $localPath = $uploadsDir . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativePath);
+            \App\Jobs\SyncS3FileToLocalJob::dispatch($s3Path, $localPath);
+            $count++;
+        }
 
-        \App\Jobs\SyncS3FileToLocalJob::dispatch($s3Path, $localPath);
-
-        Log::info("dispatchTestFileDownload: Queued {$s3Path} for local download.");
+        Log::info("SyncS3ToUploads: Queued {$count} file(s).");
+        return $count;
     }
 
     /**
@@ -305,15 +315,23 @@ class ExternalAppService
     // -------------------------------------------------------------------------
 
     /**
-     * Upload and extract external app zip file
+     * Upload and extract external app zip file.
+     * The module slug is auto-detected from the zip filename keywords
+     * ("zoom" → zoom, "teams" → teams) or derived from config.json name.
+     * Only the folder containing both config.json and install.php is installed.
      */
-    public function uploadAndInstall($file, $moduleName)
+    public function uploadAndInstall($file, $originalFileName = null)
     {
+        $extractPath = null;
+
         try {
             // Validate file
             if ($file->getMimeType() !== 'application/zip') {
                 throw new \Exception('File must be a zip archive');
             }
+
+            // Use provided filename or fall back to the uploaded file's name
+            $zipFileName = $originalFileName ?: $file->getClientOriginalName();
 
             // Create a temporary directory for extraction
             $extractPath = $this->appStoragePath . '/' . uniqid('temp_');
@@ -328,14 +346,45 @@ class ExternalAppService
             $zip->extractTo($extractPath);
             $zip->close();
 
-            // If the zip contained a single wrapper directory, unwrap it
-            $tempPath = $this->unwrapSingleDirectory($extractPath);
+            // Find the folder that contains both config.json and install.php
+            $contentDir = $this->findModuleContentDir($extractPath);
 
             // Validate module structure (check for required files)
-            $this->validateModuleStructure($tempPath);
+            $this->validateModuleStructure($contentDir);
 
             // Get module metadata from config file
-            $moduleConfig = $this->readModuleConfig($tempPath);
+            $moduleConfig = $this->readModuleConfig($contentDir);
+
+            // ── Determine the module slug ──────────────────────────────
+            // Keyword map: if the zip filename contains a keyword, force that slug
+            $keywordSlugMap = [
+                'zoom'             => 'zoom',
+                'teams'            => 'teams',
+                'external-storage' => 'external-storage',
+                'storage'          => 'external-storage',
+            ];
+
+            $moduleName = null;
+            $lowerZipName = strtolower($zipFileName);
+
+            foreach ($keywordSlugMap as $keyword => $slug) {
+                if (str_contains($lowerZipName, $keyword)) {
+                    $moduleName = $slug;
+                    break;
+                }
+            }
+
+            // Fall back: derive slug from config.json "name" field
+            if (!$moduleName) {
+                $configName = $moduleConfig['name'] ?? null;
+                $moduleName = $configName
+                    ? Str::slug($configName)
+                    : Str::slug(pathinfo($zipFileName, PATHINFO_FILENAME));
+            }
+
+            if (empty($moduleName)) {
+                throw new \Exception('Could not determine module name from zip file or config.json.');
+            }
 
             // Create the final installation directory
             $installPath = $this->appStoragePath . '/' . $moduleName;
@@ -344,12 +393,7 @@ class ExternalAppService
             $existingApp = ExternalApp::where('slug', $moduleName)->first();
             if (File::exists($installPath) && $existingApp) {
                 // Clean up temp files
-                if ($extractPath !== $tempPath && File::exists($extractPath)) {
-                    File::deleteDirectory($extractPath);
-                }
-                if (File::exists($tempPath)) {
-                    File::deleteDirectory($tempPath);
-                }
+                File::deleteDirectory($extractPath);
 
                 $displayName = $existingApp->name ?? $moduleName;
                 $status      = $existingApp->is_enabled ? 'enabled' : 'disabled';
@@ -360,10 +404,11 @@ class ExternalAppService
                 ];
             }
 
-            File::moveDirectory($tempPath, $installPath);
+            // Move only the content folder to the final install path
+            File::moveDirectory($contentDir, $installPath);
 
-            // Clean up the outer temp directory if it was unwrapped
-            if ($extractPath !== $tempPath && File::exists($extractPath)) {
+            // Clean up the entire temp directory
+            if (File::exists($extractPath)) {
                 File::deleteDirectory($extractPath);
             }
 
@@ -390,12 +435,16 @@ class ExternalAppService
             // Run any installation commands if they exist
             $this->runInstallationCommands($installPath);
 
+            // Create public symlink for serving module assets (JS, CSS, images)
+            // $this->ensurePublicSymlink($moduleName, $installPath);
+
             // Refresh the sidebar cache so changes appear immediately
             $this->refreshEnabledAppsCache();
 
             Log::info("External app '$moduleName' installed successfully", [
                 'path'    => $installPath,
                 'version' => $moduleConfig['version'] ?? '1.0.0',
+                'zip'     => $zipFileName,
             ]);
 
             return [
@@ -406,26 +455,14 @@ class ExternalAppService
 
         } catch (\Exception $e) {
             Log::error("Failed to install external app", [
-                'module' => $moduleName,
-                'error'  => $e->getMessage(),
+                'zip'   => $originalFileName,
+                'error' => $e->getMessage(),
             ]);
 
-            // Clean up temp directories if they exist
-            if (isset($extractPath) && File::exists($extractPath)) {
+            // Clean up temp directory
+            if ($extractPath && File::exists($extractPath)) {
                 File::deleteDirectory($extractPath);
             }
-            if (isset($tempPath) && $tempPath !== ($extractPath ?? null) && File::exists($tempPath)) {
-                File::deleteDirectory($tempPath);
-            }
-
-            // Update database with error status
-            ExternalApp::updateOrCreate(
-                ['slug' => $moduleName],
-                [
-                    'status'        => 'error',
-                    'error_message' => $e->getMessage(),
-                ]
-            );
 
             return [
                 'success' => false,
@@ -435,20 +472,47 @@ class ExternalAppService
     }
 
     /**
-     * If the extracted zip contains a single top-level directory (wrapper),
-     * return the path to that inner directory instead.
-     * e.g. temp_xxx/External-Storage/config.json → returns temp_xxx/External-Storage
+     * Recursively search the extracted directory for the folder that contains
+     * both config.json and install.php — the actual module content directory.
      */
-    protected function unwrapSingleDirectory(string $path): string
+    protected function findModuleContentDir(string $basePath): string
     {
-        $items = File::glob($path . '/*');
-
-        // If there's exactly one item and it's a directory, unwrap it
-        if (count($items) === 1 && File::isDirectory($items[0])) {
-            return $items[0];
+        // Check the base path itself first
+        if (
+            File::exists($basePath . '/config.json') &&
+            File::exists($basePath . '/install.php')
+        ) {
+            return $basePath;
         }
 
-        return $path;
+        // Search subdirectories recursively
+        $directories = File::directories($basePath);
+
+        foreach ($directories as $dir) {
+            if (
+                File::exists($dir . '/config.json') &&
+                File::exists($dir . '/install.php')
+            ) {
+                return $dir;
+            }
+        }
+
+        // Go one more level deep if not found yet
+        foreach ($directories as $dir) {
+            $subDirs = File::directories($dir);
+            foreach ($subDirs as $subDir) {
+                if (
+                    File::exists($subDir . '/config.json') &&
+                    File::exists($subDir . '/install.php')
+                ) {
+                    return $subDir;
+                }
+            }
+        }
+
+        throw new \Exception(
+            'No valid module found in the zip file. The zip must contain a folder with both config.json and install.php.'
+        );
     }
 
     /**
@@ -458,6 +522,7 @@ class ExternalAppService
     {
         $requiredFiles = [
             'config.json',
+            'install.php',
         ];
 
         foreach ($requiredFiles as $file) {
@@ -492,21 +557,69 @@ class ExternalAppService
      */
     protected function runInstallationCommands($modulePath)
     {
+        // First, run composer install if composer.json exists
+        $this->runComposerInstall($modulePath);
+
         $installScript = $modulePath . '/install.php';
 
         if (File::exists($installScript)) {
             try {
+                ob_start();
                 include $installScript;
+                ob_end_clean();
             } catch (\Exception $e) {
+                ob_end_clean();
                 Log::warning("Installation script returned warning: " . $e->getMessage());
             }
         }
     }
 
     /**
-     * Toggle app enabled/disabled status
+     * Run composer install for the module if composer.json exists.
      */
-    public function toggleStatus($slug, $enabled)
+    protected function runComposerInstall($modulePath)
+    {
+        if (!File::exists($modulePath . '/composer.json')) {
+            return;
+        }
+
+        Log::info("Running composer install for module at: $modulePath");
+
+        $composerPhar = base_path('composer.phar');
+        if (!File::exists($composerPhar)) {
+            Log::warning("composer.phar not found at project root. Skipping composer install for module.");
+            return;
+        }
+
+        // We use php composer.phar install
+        // --no-dev: Skip dev dependencies
+        // --optimize-autoloader: Generate optimized class map
+        // --working-dir: Specify the module directory
+        $command = "php \"$composerPhar\" install --no-dev --optimize-autoloader --working-dir=\"$modulePath\" 2>&1";
+
+        try {
+            $output = [];
+            $returnVar = 0;
+            exec($command, $output, $returnVar);
+
+            if ($returnVar !== 0) {
+                Log::error("Composer install failed for module at $modulePath", [
+                    'command' => $command,
+                    'output' => implode("\n", $output),
+                    'return_code' => $returnVar
+                ]);
+            } else {
+                Log::info("Composer install successful for module at $modulePath");
+            }
+        } catch (\Exception $e) {
+            Log::error("Exception during composer install for module: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Toggle app enabled/disabled status.
+     */
+    public function toggleStatus($slug, $enabled): array
     {
         $app = ExternalApp::where('slug', $slug)->firstOrFail();
 
@@ -522,24 +635,35 @@ class ExternalAppService
         // Refresh the sidebar cache so changes appear immediately
         $this->refreshEnabledAppsCache();
 
-        // When external-storage module is disabled, revert to local storage and download test file back
-        if ($slug === 'external-storage' && !$enabled) {
-            $this->writeMainEnvFlag('FILESYSTEM_DRIVER', 'local');
-            $this->dispatchTestFileDownload();
+        $syncInfo = null;
+
+        if ($slug === 'external-storage') {
+            if ($enabled) {
+                // Restore driver to s3 if credentials are configured
+                $hasCredentials = $this->getModuleEnv('external-storage', 'S3_ACCESS_KEY_ID')
+                               && $this->getModuleEnv('external-storage', 'S3_BUCKET');
+                $this->setModuleEnv('external-storage', [
+                    'STORAGE_DRIVER' => $hasCredentials ? 's3' : 'local',
+                ]);
+                $count = $this->dispatchUploadsToS3();
+                $syncInfo = ['direction' => 'local_to_s3', 'file_count' => $count];
+            } else {
+                // Force local when disabled
+                $this->setModuleEnv('external-storage', [
+                    'STORAGE_DRIVER' => 'local',
+                ]);
+                $count = $this->dispatchS3ToUploads();
+                $syncInfo = ['direction' => 's3_to_local', 'file_count' => $count];
+            }
         }
 
-        // When external-storage module is enabled, sync storage driver and queue one test file upload
-        if ($slug === 'external-storage' && $enabled) {
-            $moduleDriver = $this->getModuleEnv('external-storage', 'STORAGE_DRIVER') ?: 'local';
-            $this->writeMainEnvFlag('FILESYSTEM_DRIVER', $moduleDriver === 's3' ? 's3' : 'local');
-
-            // Dispatch a test sync: pick the first file from uploads/
-            $this->dispatchTestFileSync();
+        if ($slug === 'interactive-whiteboard') {
+            $this->writeMainEnvFlag('WHITEBOARD_INTEGRATION', $enabled ? 'true' : 'false');
         }
 
         Log::info("External app '$slug' status changed to: " . ($enabled ? 'enabled' : 'disabled'));
 
-        return $app;
+        return ['app' => $app, 'sync' => $syncInfo];
     }
 
     /**
@@ -553,20 +677,21 @@ class ExternalAppService
             // Run uninstall script if exists
             if ($app->installed_path && File::exists($app->installed_path . '/uninstall.php')) {
                 try {
+                    ob_start();
                     include $app->installed_path . '/uninstall.php';
+                    ob_end_clean();
                 } catch (\Exception $e) {
+                    ob_end_clean();
                     Log::warning("Uninstall script warning: " . $e->getMessage());
                 }
             }
 
+            // Remove public symlink for module assets
+            // $this->removePublicSymlink($app->slug);
+
             // Remove from filesystem (this also removes the module's .env)
             if ($app->installed_path && File::exists($app->installed_path)) {
                 File::deleteDirectory($app->installed_path);
-            }
-
-            // Revert to local storage if external-storage module is being uninstalled
-            if ($slug === 'external-storage') {
-                $this->writeMainEnvFlag('FILESYSTEM_DRIVER', 'local');
             }
 
             // Delete from database
@@ -609,6 +734,55 @@ class ExternalAppService
     public function getApp($slug)
     {
         return ExternalApp::where('slug', $slug)->firstOrFail();
+    }
+
+    /**
+     * Create a symlink from public/modules/{slug} → modules/{slug}
+     * so that module assets (JS, CSS) are web-accessible.
+     */
+    protected function ensurePublicSymlink(string $slug, string $installPath): void
+    {
+        $publicModulesDir = public_path('modules');
+        $linkPath = $publicModulesDir . DIRECTORY_SEPARATOR . $slug;
+
+        // Create public/modules/ directory if it doesn't exist
+        if (!File::isDirectory($publicModulesDir)) {
+            File::makeDirectory($publicModulesDir, 0755, true);
+        }
+
+        // Remove existing link or directory if present
+        if (is_link($linkPath)) {
+            unlink($linkPath);
+        } elseif (File::isDirectory($linkPath)) {
+            File::deleteDirectory($linkPath);
+        }
+
+        // Create symlink: public/modules/{slug} → modules/{slug}
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            // Windows: use junction for directory symlinks
+            exec('mklink /J "' . str_replace('/', '\\', $linkPath) . '" "' . str_replace('/', '\\', $installPath) . '"');
+        } else {
+            symlink($installPath, $linkPath);
+        }
+
+        Log::info("Public symlink created for module '$slug'", [
+            'link' => $linkPath,
+            'target' => $installPath,
+        ]);
+    }
+
+    /**
+     * Remove the public symlink for a module.
+     */
+    protected function removePublicSymlink(string $slug): void
+    {
+        $linkPath = public_path('modules' . DIRECTORY_SEPARATOR . $slug);
+
+        if (is_link($linkPath)) {
+            unlink($linkPath);
+        } elseif (File::isDirectory($linkPath)) {
+            File::deleteDirectory($linkPath);
+        }
     }
 
     /**

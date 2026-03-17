@@ -68,6 +68,14 @@ class Course extends Model
         });
     }
 
+    public function scopeActive($query)
+{
+    return $query->where('published', 1)
+        ->where(function ($q) {
+            $q->whereNull('expire_at')
+              ->orWhereDate('expire_at', '>=', now());
+        });
+}
 public function setExpiryDateAttribute($input)
 {
     if ($input != null && $input != '') {
@@ -89,6 +97,19 @@ public function getExpiryDateAttribute($input)
     } else {
         return '';
     }
+}
+
+public function getStatusLabelAttribute()
+{
+    if ($this->expire_at && Carbon::parse($this->expire_at)->isPast()) {
+        return 'expired';
+    }
+
+    if ($this->published == 1) {
+        return 'published';
+    }
+
+    return 'draft';
 }
 
     public function latestModuleWeightage()
