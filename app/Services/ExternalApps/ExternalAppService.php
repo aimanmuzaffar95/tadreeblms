@@ -47,27 +47,35 @@ class ExternalAppService
             return [];
         }
 
-        $lines  = explode("\n", str_replace("\r\n", "\n", File::get($path)));
-        $result = [];
+        $content = File::get($path);
+        return $this->parseEnvContent($content);
+    }
 
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if ($line === '' || str_starts_with($line, '#')) {
-                continue;
+    /**
+     * Internal helper to parse .env content with support for multi-line quoted values.
+     */
+    protected function parseEnvContent(string $content): array
+    {
+        $result = [];
+        // Match key=value pairs. Value can be:
+        // 1. Double quoted: "..." (can contain escaped quotes and newlines)
+        // 2. Single quoted: '...' (can contain newlines)
+        // 3. Unquoted: any chars until newline or #
+        // Regex: /^\s*([A-Z0-9_]+)\s*=\s*(?:("((?:[^"\\]|\\.)*)"|'([^']*)'|([^#\n\r]*)))/m
+        $pattern = '/^\s*([A-Z0-9_]+)\s*=\s*(?:("((?:[^"\\\\]|\\\\.)*)"|\'([^\']*)\'|([^#\n\r]*)))/m';
+
+        if (preg_match_all($pattern, $content, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $match) {
+                $key = $match[1];
+                if (isset($match[3]) && $match[3] !== '') { // Double quoted
+                    $value = str_replace(['\\"', '\\\\'], ['"', '\\'], $match[3]);
+                } elseif (isset($match[4]) && $match[4] !== '') { // Single quoted
+                    $value = $match[4];
+                } else { // Unquoted
+                    $value = trim($match[5] ?? '');
+                }
+                $result[$key] = $value;
             }
-            if (!str_contains($line, '=')) {
-                continue;
-            }
-            [$key, $value] = explode('=', $line, 2);
-            // Strip surrounding quotes if present
-            $value = trim($value);
-            if (
-                (str_starts_with($value, '"') && str_ends_with($value, '"')) ||
-                (str_starts_with($value, "'") && str_ends_with($value, "'"))
-            ) {
-                $value = substr($value, 1, -1);
-            }
-            $result[trim($key)] = $value;
         }
 
         return $result;
@@ -93,26 +101,18 @@ class ExternalAppService
             return $default;
         }
 
-        $lines = explode("\n", str_replace("\r\n", "\n", file_get_contents($path)));
+        $content = file_get_contents($path);
+        
+        // Simple static parser similar to the above but without dependencies
+        $pattern = '/^\s*' . preg_quote($key, '/') . '\s*=\s*(?:("((?:[^"\\\\]|\\\\.)*)"|\'([^\']*)\'|([^#\n\r]*)))/m';
 
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if ($line === '' || str_starts_with($line, '#')) {
-                continue;
-            }
-            if (!str_contains($line, '=')) {
-                continue;
-            }
-            [$envKey, $value] = explode('=', $line, 2);
-            if (trim($envKey) === $key) {
-                $value = trim($value);
-                if (
-                    (str_starts_with($value, '"') && str_ends_with($value, '"')) ||
-                    (str_starts_with($value, "'") && str_ends_with($value, "'"))
-                ) {
-                    $value = substr($value, 1, -1);
-                }
-                return $value;
+        if (preg_match($pattern, $content, $match)) {
+            if (isset($match[2]) && $match[2] !== '') { // Double quoted
+                return str_replace(['\\"', '\\\\'], ['"', '\\'], $match[2]);
+            } elseif (isset($match[3]) && $match[3] !== '') { // Single quoted
+                return $match[3];
+            } else { // Unquoted
+                return trim($match[4] ?? '');
             }
         }
 
@@ -146,7 +146,7 @@ class ExternalAppService
                 $valueForEnv = $escaped;
             }
 
-            $pattern = "/^{$key}=.*$/m";
+            $pattern = "/^\s*{$key}\s*=\s*(?:\"(?:[^\"\\\\]|\\\\.)*\"|'[^']*'|[^#\r\n]*)/m";
 
             if (preg_match($pattern, $envContent)) {
                 $envContent = preg_replace($pattern, "{$key}={$valueForEnv}", $envContent);
@@ -210,7 +210,7 @@ class ExternalAppService
             ? '"' . $escaped . '"'
             : $escaped;
 
-        $pattern = "/^{$key}=.*$/m";
+        $pattern = "/^\s*{$key}\s*=\s*(?:\"(?:[^\"\\\\]|\\\\.)*\"|'[^']*'|[^#\r\n]*)/m";
 
         if (preg_match($pattern, $envContent)) {
             $envContent = preg_replace($pattern, "{$key}={$valueForEnv}", $envContent);
@@ -359,6 +359,8 @@ class ExternalAppService
             // Keyword map: if the zip filename contains a keyword, force that slug
             $keywordSlugMap = [
                 'zoom'             => 'zoom',
+                'google-meet'      => 'google-meet-integration',
+                'meet'             => 'google-meet-integration',
                 'teams'            => 'teams',
                 'external-storage' => 'external-storage',
                 'storage'          => 'external-storage',
@@ -434,6 +436,9 @@ class ExternalAppService
 
             // Run any installation commands if they exist
             $this->runInstallationCommands($installPath);
+
+            // Create public symlink for serving module assets (JS, CSS, images)
+            // $this->ensurePublicSymlink($moduleName, $installPath);
 
             // Refresh the sidebar cache so changes appear immediately
             $this->refreshEnabledAppsCache();
@@ -554,6 +559,9 @@ class ExternalAppService
      */
     protected function runInstallationCommands($modulePath)
     {
+        // First, run composer install if composer.json exists
+        $this->runComposerInstall($modulePath);
+
         $installScript = $modulePath . '/install.php';
 
         if (File::exists($installScript)) {
@@ -565,6 +573,48 @@ class ExternalAppService
                 ob_end_clean();
                 Log::warning("Installation script returned warning: " . $e->getMessage());
             }
+        }
+    }
+
+    /**
+     * Run composer install for the module if composer.json exists.
+     */
+    protected function runComposerInstall($modulePath)
+    {
+        if (!File::exists($modulePath . '/composer.json')) {
+            return;
+        }
+
+        Log::info("Running composer install for module at: $modulePath");
+
+        $composerPhar = base_path('composer.phar');
+        if (!File::exists($composerPhar)) {
+            Log::warning("composer.phar not found at project root. Skipping composer install for module.");
+            return;
+        }
+
+        // We use php composer.phar install
+        // --no-dev: Skip dev dependencies
+        // --optimize-autoloader: Generate optimized class map
+        // --working-dir: Specify the module directory
+        $command = "php \"$composerPhar\" install --no-dev --optimize-autoloader --working-dir=\"$modulePath\" 2>&1";
+
+        try {
+            $output = [];
+            $returnVar = 0;
+            exec($command, $output, $returnVar);
+
+            if ($returnVar !== 0) {
+                Log::error("Composer install failed for module at $modulePath", [
+                    'command' => $command,
+                    'output' => implode("\n", $output),
+                    'return_code' => $returnVar
+                ]);
+            } else {
+                Log::info("Composer install successful for module at $modulePath");
+            }
+        } catch (\Exception $e) {
+            Log::error("Exception during composer install for module: " . $e->getMessage());
         }
     }
 
@@ -609,6 +659,10 @@ class ExternalAppService
             }
         }
 
+        if ($slug === 'interactive-whiteboard') {
+            $this->writeMainEnvFlag('WHITEBOARD_INTEGRATION', $enabled ? 'true' : 'false');
+        }
+
         Log::info("External app '$slug' status changed to: " . ($enabled ? 'enabled' : 'disabled'));
 
         return ['app' => $app, 'sync' => $syncInfo];
@@ -633,6 +687,9 @@ class ExternalAppService
                     Log::warning("Uninstall script warning: " . $e->getMessage());
                 }
             }
+
+            // Remove public symlink for module assets
+            // $this->removePublicSymlink($app->slug);
 
             // Remove from filesystem (this also removes the module's .env)
             if ($app->installed_path && File::exists($app->installed_path)) {
@@ -679,6 +736,55 @@ class ExternalAppService
     public function getApp($slug)
     {
         return ExternalApp::where('slug', $slug)->firstOrFail();
+    }
+
+    /**
+     * Create a symlink from public/modules/{slug} → modules/{slug}
+     * so that module assets (JS, CSS) are web-accessible.
+     */
+    protected function ensurePublicSymlink(string $slug, string $installPath): void
+    {
+        $publicModulesDir = public_path('modules');
+        $linkPath = $publicModulesDir . DIRECTORY_SEPARATOR . $slug;
+
+        // Create public/modules/ directory if it doesn't exist
+        if (!File::isDirectory($publicModulesDir)) {
+            File::makeDirectory($publicModulesDir, 0755, true);
+        }
+
+        // Remove existing link or directory if present
+        if (is_link($linkPath)) {
+            unlink($linkPath);
+        } elseif (File::isDirectory($linkPath)) {
+            File::deleteDirectory($linkPath);
+        }
+
+        // Create symlink: public/modules/{slug} → modules/{slug}
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            // Windows: use junction for directory symlinks
+            exec('mklink /J "' . str_replace('/', '\\', $linkPath) . '" "' . str_replace('/', '\\', $installPath) . '"');
+        } else {
+            symlink($installPath, $linkPath);
+        }
+
+        Log::info("Public symlink created for module '$slug'", [
+            'link' => $linkPath,
+            'target' => $installPath,
+        ]);
+    }
+
+    /**
+     * Remove the public symlink for a module.
+     */
+    protected function removePublicSymlink(string $slug): void
+    {
+        $linkPath = public_path('modules' . DIRECTORY_SEPARATOR . $slug);
+
+        if (is_link($linkPath)) {
+            unlink($linkPath);
+        } elseif (File::isDirectory($linkPath)) {
+            File::deleteDirectory($linkPath);
+        }
     }
 
     /**
