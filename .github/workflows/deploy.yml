@@ -36,12 +36,12 @@ jobs:
             php artisan config:clear || true
             php artisan view:clear || true
 
-            echo "⚙️ Optimizing Laravel..."
+           
             
             
             php artisan view:cache
 
             echo "🗄 Running migrations..."
-            php artisan migrate --force
+            php artisan migrate 
 
             echo "✅ Deployment completed successfully"
