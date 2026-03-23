@@ -117,7 +117,16 @@ class TestQuestionController extends Controller
     {
 
         //dd($request->all());
-
+        $request->validate([
+            'score' => ['required', 'integer', 'min:1', 'max:999'],
+        ],
+        [
+            'score.required' => 'Marks is required.',
+            'score.max' => 'Marks cannot exceed 999.',
+            'score.min' => 'Marks must be at least 1.',
+            'score.integer' => 'Marks must be a valid number.',
+        ]);
+        
         if($request->question_type ==1) {
             $options = isset($request->options) ? json_decode($request->options) : [];
             if(isset($request->options) && count($options) == 0) {
@@ -166,7 +175,7 @@ class TestQuestionController extends Controller
             'question_type' => $request->question_type,
             'question_text' => $request->question,
             'solution' => $request->solution,
-            'marks' => $request->marks,
+            'score' => $request->score,
             'comment' => $request->comment,
             'option_json' => $request->question_type != 3 ? $request->options : NULL,
             'created_at' => date('Y-m-d H:i:s'),
@@ -288,6 +297,14 @@ class TestQuestionController extends Controller
             'message' => 'Question Updated is not option'
         ));
         
+        if (empty($request->marks) || $request->marks <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please provide valid marks for the question',
+                'errors' => 'Please provide valid marks for the question',
+            ], 422);
+        }
+
         if($request->question_type ==1) {
             $options = isset($request->options) ? json_decode($request->options) : [];
             if(isset($request->options) && count($options) == 0) {
@@ -338,7 +355,7 @@ class TestQuestionController extends Controller
             'question_type' => $request->question_type,
             'question_text' => $request->question,
             'solution' => $request->solution,
-            'marks' => $request->marks,
+            'score' => $request->score,
             'comment' => $request->comment,
             'option_json' => $request->question_type != 3 ? $request->options : NULL
         ]);

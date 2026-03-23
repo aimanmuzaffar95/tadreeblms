@@ -17,6 +17,7 @@ use App\Http\Controllers\LessonController;
 use App\Http\Controllers\Backend\SettingsController;
 
 use App\Http\Controllers\Backend\Admin\CourseFeedbackController;
+use App\Http\Controllers\Backend\Admin\AssessmentAccountsController ;
 
 
 //Route::get('/install', [InstallerController::class, 'index']);
@@ -26,6 +27,9 @@ use App\Http\Controllers\Backend\MenuController;
 use App\Http\Controllers\Frontend\Auth\LoginController;
 use App\Ldap\LdapUser;
 use LdapRecord\Container;
+Route::get('/admin/course-assignment', [AssessmentController::class,'index'])
+->name('admin.course.assign');
+Route::get('admin/asmnt_0_withcourse', [AssessmentAccountsController::class, 'createWithCourse']);
 Route::get('/lesson/check-course', [App\Http\Controllers\Backend\Admin\LessonsController::class, 'checkCourse'])
     ->name('lessons.course.check');
 Route::get('/ldap-test', function () {
@@ -49,6 +53,14 @@ Route::get('/ldap-users', function () {
         ];
     });
 });
+
+
+Route::post(
+    'assessment_accounts/course-assignment',
+    [AssessmentAccountsController::class, 'courseAssignment']
+)->name('admin.assessment_accounts.course-assignment');
+
+Route::get('/refresh-captcha/{mode?}',[LoginController::class,'refresh_captcha'])->name('refresh_captcha');
 
 Route::get('syncCourseAssignment    AndSubscribeCourseData', function () {
     CustomHelper::syncCourseAssignmentAndSubscribeCourseData();
