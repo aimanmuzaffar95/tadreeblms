@@ -792,6 +792,10 @@ public function createWithCourse(Request $request)
             return response()->json(['error' => 'Course not found'], 404);
         }
 
+        if ($course->expire_at && \Carbon\Carbon::parse($course->expire_at)->isPast()) {
+            return response()->json(['error' => 'This course has expired and enrollment is no longer allowed.'], 422);
+        }
+
         $course_link = url("/course/$course->slug");
 
         $users = [];
