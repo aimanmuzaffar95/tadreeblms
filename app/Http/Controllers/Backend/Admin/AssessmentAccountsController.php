@@ -55,12 +55,6 @@ class AssessmentAccountsController extends Controller
         $assessment_accounts = AssessmentAccount::where('deleted_at', NULL)->orderBy('created_at', 'desc')->get();
         return view('backend.assessment_accounts.index', compact('assessment_accounts'));
     }
-public function createWithCourse(Request $request)
-{
-    $published_courses = Course::where('status', 'published')->get();
-    $internal_users = User::where('role', 'employee')->get();
-    return view('backend.assignments.create_with_course', compact('published_courses', 'internal_users'));
-}
 
 public function courseAssignment(Request $request)
 {
@@ -598,9 +592,9 @@ public function courseAssignment(Request $request)
             'published' => 1,
         ]);
 
-     return redirect()->route('admin.courses.index')
-    ->with('course_created', true)
-    ->with('course_id', $course_id);
+        return redirect()
+            ->route('admin.courses.index')
+            ->withFlashSuccess('You completed all the flow for Courses...');
     }
 
 
@@ -816,10 +810,6 @@ public function courseAssignment(Request $request)
 
         if (!$course) {
             return response()->json(['error' => 'Course not found'], 404);
-        }
-
-        if ($course->expire_at && \Carbon\Carbon::parse($course->expire_at)->isPast()) {
-            return response()->json(['error' => 'This course has expired and enrollment is no longer allowed.'], 422);
         }
 
         $course_link = url("/course/$course->slug");
@@ -1327,71 +1317,111 @@ public function courseAssignment(Request $request)
 
     public function course_assign_list(Request $request)
     {
+        //dd($request->all());
         if ($request->ajax()) {
-            $user_id        = $request->user_id ?? null;
-            $course_id      = $request->course_id ?? null;
-            $progress_filter = $request->progress_filter ?? null;
+
+            $user_id = $request->user_id ?? null;
+            $course_id = $request->course_id ?? null;
 
             $assessments = CourseAssignmentToUser::query()
-                ->with('course', 'assignment', 'user')
-                ->leftJoin('subscribe_courses as sc', function ($join) {
-                    $join->on('sc.user_id', '=', 'course_assignment_users.user_id')
-                         ->on('sc.course_id', '=', 'course_assignment_users.course_id')
-                         ->whereNull('sc.deleted_at');
-                })
-                ->where('course_assignment_users.by_pathway', '0')
-                ->when(!empty($course_id), fn ($q) => $q->where('course_assignment_users.course_id', $course_id))
-                ->when(!empty($user_id),   fn ($q) => $q->where('course_assignment_users.user_id', $user_id))
-                ->when(!empty($progress_filter), function ($q) use ($progress_filter) {
-                    match ($progress_filter) {
-                        '0'     => $q->where(fn ($q2) => $q2->whereNull('sc.assignment_progress')->orWhere('sc.assignment_progress', 0)),
-                        '1-50'  => $q->whereBetween('sc.assignment_progress', [1, 50]),
-                        '51-99' => $q->whereBetween('sc.assignment_progress', [51, 99]),
-                        '100'   => $q->where('sc.assignment_progress', 100),
-                        default => null,
-                    };
-                })
-                ->select('course_assignment_users.*', DB::raw('COALESCE(sc.assignment_progress, 0) as sc_progress'))
-                ->orderBy('course_assignment_users.id', 'desc');
+                            ->with('course','assignment','user')
+                            ->where('by_pathway','0')
+                            ->when(!empty($course_id), function ($q) use ($course_id) {
+                                $q->where('course_id', $course_id);
+                            })
+                            ->when(!empty($user_id), function ($q) use ($user_id) {
+                                $q->where('user_id', $user_id);
+                            })
+                            ->orderBy('id', 'Desc');
+            
 
             return DataTables::of($assessments)
-                ->addColumn('course_title', fn ($row) => $row->course->title ?? '')
-                ->addColumn('title', fn ($row) => $row->assignment->title ?? '')
-                ->editColumn('assign_date', fn ($row) => $row->assignment->assign_date
-                    ? Carbon::parse($row->assignment->assign_date)->format('d/m/Y') : '-')
-                ->editColumn('due_date', fn ($row) => $row->assignment->due_date
-                    ? Carbon::parse($row->assignment->due_date)->format('d/m/Y') : '-')
-                ->addColumn('course_cat',          fn ($row) => $row->course->category->name ?? '')
-                ->addColumn('course_code',         fn ($row) => $row->course->course_code ?? '')
-                ->addColumn('assign_by',           fn ($row) => $row->assignment->assignedBy->full_name ?? '')
-                ->addColumn('deprt_title',         fn ($row) => '')
-                ->addColumn('assignment_title',    fn ($row) => $row->assignment->title ?? '')
-                ->addColumn('assigned_user_names', fn ($row) => $row->user->full_name ?? '')
-                ->addColumn('completion_percentage', fn ($row) => (int) ($row->sc_progress ?? 0))
-                ->filter(function ($query) use ($request) {
-                    $search = $request->input('search.value');
-                    if (empty($search)) return;
-
-                    $query->where(function ($q) use ($search) {
-                        $q->whereHas('user', function ($uq) use ($search) {
-                            $uq->where('first_name', 'like', "%{$search}%")
-                               ->orWhere('last_name', 'like', "%{$search}%")
-                               ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$search}%"]);
-                        })
-                        ->orWhereHas('course', function ($cq) use ($search) {
-                            $cq->where('title', 'like', "%{$search}%")
-                               ->orWhere('course_code', 'like', "%{$search}%");
-                        })
-                        ->orWhereHas('course.category', fn ($catq) => $catq->where('name', 'like', "%{$search}%"))
-                        ->orWhereHas('assignment', fn ($aq) => $aq->where('title', 'like', "%{$search}%"));
-                    });
+                ->addColumn('course_title', function ($row) {
+                    if($row->course) {
+                        return @$row->course->title;
+                    } else {
+                        return '';
+                    }
                 })
+                ->addColumn('title', function ($row) {
+                    if($row->assignment) {
+                        return @$row->assignment->title;
+                    } else {
+                        return '';
+                    }
+                })
+                ->editColumn('assign_date', function ($row) {
+                    return @$row->assignment->assign_date != "" ? Carbon::parse($row->assignment->assign_date)->format('d/m/Y') : '-';
+                })
+                ->editColumn('due_date', function ($row) {
+                    return @$row->assignment->due_date != "" ? Carbon::parse($row->assignment->due_date)->format('d/m/Y') : '-';
+                })
+                ->addColumn('course_cat', function ($row) {
+                    return @$row->course->category->name;
+                })
+                ->addColumn('course_code', function ($row) {
+                    return @$row->course->course_code;
+                })
+                ->addColumn('assign_by', function ($row) {
+                    return @$row->assignment->assignedBy->full_name;
+                })
+                ->addColumn('deprt_title', function ($row) {
+                    return '';
+                })
+                ->addColumn('assignment_title', function ($row) {
+                    if($row->assignment) {
+                        return @$row->assignment->title;
+                    } else {
+                        return '';
+                    }
+                })
+                ->addColumn('assigned_user_names', function ($row) {
+                    return @$row->user->full_name;
+                })
+                ->filter(function ($query) use ($request) {
+                    $search = $request->input('search')['value'] ?? null;
+
+                    if (!empty($search)) {
+                        $query->where(function($q) use ($search) {
+                            // Search by user name (first + last)
+                            $q->whereHas('user', function ($uq) use ($search) {
+                                $uq->where('first_name', 'like', "%{$search}%")
+                                ->orWhere('last_name', 'like', "%{$search}%")
+                                ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$search}%"]);
+                            });
+                            $q->orWhereHas('course', function ($query) use ($search) {
+                                    $query->where('title', 'like', "%{$search}%")
+                                        ->orWhere('course_code', 'like', "%{$search}%");
+                            });
+                            $q->orWhereHas('course.category', function ($query) use ($search) {
+                                $query->where('name', 'like', "%{$search}%");
+                            });
+
+                            $q->orWhereHas('assignment', function ($aq) use ($search) {
+                                $aq->where('title', 'like', "%{$search}%");
+                            });
+
+                        });
+                    }
+                })
+
                 ->make();
         }
 
-        return view('backend.assessment_accounts.course_assignment_index', [
-            'internal_users'   => User::query()->where('employee_type', 'internal')->get(),
-            'published_courses' => Course::query()->get(),
+        $internal_users = User::query()
+            ->where('employee_type', 'internal')
+            //->where('active','1')
+            ->get();
+
+        $published_courses = Course::query()
+            //->where('published', '1')
+            ->get();
+
+            
+
+        return view('backend.assessment_accounts.course_assignment_index',[
+            'internal_users' => $internal_users,
+            'published_courses' => $published_courses,
         ]);
     }
 
