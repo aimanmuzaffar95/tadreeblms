@@ -737,7 +737,7 @@
                     <li class="nav-item">
                         <a class="nav-link {{ active_class(Active::checkUriPattern('admin/settings/certificate-template*')) }}"
                             href="{{ route('admin.certificate-template-settings') }}">
-                            <span class="title"><i class="fas fa-certificate mr-1"></i>Certificate Template</span>
+                            <span class="title"><i class="fas fa-certificate mr-1"></i>@lang('menus.backend.sidebar.settings.certificate_template')</span>
                         </a>
                     </li>
 
@@ -757,7 +757,7 @@
                     <li class="nav-item">
                         <a class="nav-link {{ active_class(Active::checkUriPattern('admin/external-apps/zoom/configure')) }}"
                             href="{{ route('admin.external-apps.edit-config', ['slug' => 'zoom']) }}">
-                            <span class="title">Zoom Configuration</span>
+                            <span class="title">@lang('menus.backend.sidebar.settings.zoom_configuration')</span>
                         </a>
                     </li>
                     @endif
@@ -765,7 +765,7 @@
                     <li class="nav-item">
                         <a class="nav-link {{ active_class(Active::checkUriPattern('admin/external-apps/google-meet-integration/configure')) }}"
                             href="{{ route('admin.external-apps.edit-config', ['slug' => 'google-meet-integration']) }}">
-                            <span class="title">Google Meet Configuration</span>
+                            <span class="title">@lang('menus.backend.sidebar.settings.google_meet_configuration')</span>
                         </a>
                     </li>
                     @endif
@@ -773,7 +773,7 @@
                     <li class="nav-item">
                         <a class="nav-link {{ active_class(Active::checkUriPattern('admin/s3-storage-settings*')) }}"
                             href="{{ route('admin.s3-storage-settings') }}">
-                            <span class="title"><i class="fas fa-cloud mr-1"></i>S3 Storage Settings</span>
+                            <span class="title"><i class="fas fa-cloud mr-1"></i>@lang('menus.backend.sidebar.settings.s3_storage_settings')</span>
                         </a>
                     </li>
                     @endif
