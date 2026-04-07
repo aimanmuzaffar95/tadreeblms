@@ -89,6 +89,18 @@ class LmsEventCaptureSeeder extends Seeder
             ]
         );
 
+        // Keep seeded lessons visible for completed courses. Some course views
+        // only include lessons where lessons.created_at < subscribe_courses.completed_at.
+        $lessonSeededAt = Carbon::now()->subDays(4);
+
+        DB::table('lessons')
+            ->whereIn('id', [$lesson1->id, $lesson2->id])
+            ->update([
+                'course_id'  => $course->id,
+                'published'  => 1,
+                'created_at' => $lessonSeededAt,
+                'updated_at' => $lessonSeededAt,
+            ]);
         // ── 3. Quiz (course-level test) ──────────────────────────────────────
         $test = DB::table('tests')->where('slug', 'kpi-live-test-quiz')->first();
         if (! $test) {
@@ -119,7 +131,7 @@ class LmsEventCaptureSeeder extends Seeder
             DB::table('test_questions')->insert([
                 [
                     'test_id'       => $testId,
-                    'question_type' => 'mcq',
+                    'question_type' => 1,
                     'question_text' => 'Which service writes events to the KPI event log?',
                     'option_json'   => $q1Options,
                     'marks'         => 50,
@@ -128,7 +140,7 @@ class LmsEventCaptureSeeder extends Seeder
                 ],
                 [
                     'test_id'       => $testId,
-                    'question_type' => 'mcq',
+                    'question_type' => 1,
                     'question_text' => 'Which table stores structured LMS KPI events?',
                     'option_json'   => $q2Options,
                     'marks'         => 50,
@@ -136,10 +148,155 @@ class LmsEventCaptureSeeder extends Seeder
                     'updated_at'    => Carbon::now(),
                 ],
             ]);
+          
         } else {
             $testId = $test->id;
         }
 
+        // Ensure question format/options are compatible with frontend rendering.
+        $seededQuestions = DB::table('test_questions')
+            ->where('test_id', $testId)
+            ->where('is_deleted', 0)
+            ->whereNull('deleted_at')
+            ->get();
+
+        foreach ($seededQuestions as $seededQuestion) {
+            if ((string) $seededQuestion->question_type === 'mcq' || (int) $seededQuestion->question_type <= 0) {
+                DB::table('test_questions')
+                    ->where('id', $seededQuestion->id)
+                    ->update(['question_type' => 1]);
+            }
+
+            if (empty($seededQuestion->option_json)) {
+                continue;
+            }
+
+            $decodedOptions = json_decode(html_entity_decode($seededQuestion->option_json), true);
+            if (!is_array($decodedOptions) || count($decodedOptions) === 0) {
+                continue;
+            }
+
+            foreach ($decodedOptions as $option) {
+                $optionText = is_array($option)
+                    ? ($option['option'] ?? $option[0] ?? null)
+                    : null;
+
+                $isRight = is_array($option)
+                    ? ($option['is_correct'] ?? $option[1] ?? 0)
+                    : 0;
+
+                if (empty($optionText)) {
+                    continue;
+                }
+
+                DB::table('test_question_options')->updateOrInsert(
+                    [
+                        'question_id' => $seededQuestion->id,
+                        'option_text' => $optionText,
+                    ],
+                    [
+                        'is_right' => (int) ((bool) $isRight),
+                    ]
+                );
+            }
+        }
+
+        // ── 3c. Lesson-level quiz (for in-lesson quiz flow) ───────────────
+        $lessonQuizTest = DB::table('tests')
+            ->where('course_id', $course->id)
+            ->where('lesson_id', $lesson2->id)
+            ->where('slug', 'kpi-live-lesson-quiz')
+            ->first();
+
+        if (! $lessonQuizTest) {
+            $lessonQuizId = DB::table('tests')->insertGetId([
+                'course_id'     => $course->id,
+                'lesson_id'     => $lesson2->id,
+                'title'         => 'KPI Lesson Quiz',
+                'description'   => 'Lesson-level quiz for KPI live testing.',
+                'slug'          => 'kpi-live-lesson-quiz',
+                'passing_score' => 60,
+                'published'     => 1,
+                'created_at'    => Carbon::now(),
+                'updated_at'    => Carbon::now(),
+            ]);
+
+            $lessonQuestionId = DB::table('test_questions')->insertGetId([
+                'test_id'       => $lessonQuizId,
+                'question_type' => 1,
+                'question_text' => 'Which event type is emitted after successful login?',
+                'option_json'   => json_encode([
+                    ['option' => 'user_login', 'is_correct' => true],
+                    ['option' => 'course_subscribed', 'is_correct' => false],
+                    ['option' => 'assessment_ready', 'is_correct' => false],
+                ]),
+                'marks'         => 100,
+                'created_at'    => Carbon::now(),
+                'updated_at'    => Carbon::now(),
+            ]);
+
+            DB::table('test_question_options')->insert([
+                [
+                    'question_id' => $lessonQuestionId,
+                    'option_text' => 'user_login',
+                    'is_right'    => 1,
+                ],
+                [
+                    'question_id' => $lessonQuestionId,
+                    'option_text' => 'course_subscribed',
+                    'is_right'    => 0,
+                ],
+                [
+                    'question_id' => $lessonQuestionId,
+                    'option_text' => 'assessment_ready',
+                    'is_right'    => 0,
+                ],
+            ]);
+        } else {
+            $lessonQuizId = $lessonQuizTest->id;
+        }
+
+        // ── 3b. Course timeline (required by /course/{slug} page) ───────────
+        // That page renders from course_timeline, not directly from lessons.
+        DB::table('course_timeline')->updateOrInsert(
+            [
+                'course_id'  => $course->id,
+                'model_type' => 'App\\Models\\Lesson',
+                'model_id'   => $lesson1->id,
+            ],
+            [
+                'sequence'   => 1,
+                'created_at' => Carbon::now()->subDays(4),
+                'updated_at' => Carbon::now()->subDays(4),
+            ]
+        );
+
+        DB::table('course_timeline')->updateOrInsert(
+            [
+                'course_id'  => $course->id,
+                'model_type' => 'App\\Models\\Lesson',
+                'model_id'   => $lesson2->id,
+            ],
+            [
+                'sequence'   => 2,
+                'created_at' => Carbon::now()->subDays(4),
+                'updated_at' => Carbon::now()->subDays(4),
+            ]
+        );
+
+        DB::table('course_timeline')->updateOrInsert(
+            [
+                'course_id'  => $course->id,
+                'model_type' => 'App\\Models\\Test',
+                'model_id'   => $testId,
+            ],
+            [
+                'sequence'   => 3,
+                'created_at' => Carbon::now()->subDays(4),
+                'updated_at' => Carbon::now()->subDays(4),
+            ]
+        );
+      
         // ── 4. Enrol student ─────────────────────────────────────────────────
         // firstOrCreate so we never reset is_completed on re-runs
         SubscribeCourse::firstOrCreate(
@@ -200,6 +357,36 @@ class LmsEventCaptureSeeder extends Seeder
                 Carbon::now()->subDay()
             );
         }
+      
+      $existingLessonQuizResult = DB::table('tests_results')
+            ->where('test_id', $lessonQuizId)
+            ->where('user_id', $student->id)
+            ->first();
+
+        if (! $existingLessonQuizResult) {
+            DB::table('tests_results')->insert([
+                'test_id'     => $lessonQuizId,
+                'user_id'     => $student->id,
+                'test_result' => 1,
+                'created_at'  => Carbon::now()->subDay(),
+                'updated_at'  => Carbon::now()->subDay(),
+            ]);
+
+            app(LmsEventRecorder::class)->record(
+                $student->id,
+                LmsEventRecorder::TYPE_QUIZ_ATTEMPT,
+                [
+                    'course_id'     => $course->id,
+                    'test_id'       => $lessonQuizId,
+                    'lesson_id'     => $lesson2->id,
+                    'attempt_scope' => 'lesson_test',
+                    'score'         => 100,
+                    'passed'        => true,
+                    'source'        => 'seeder',
+                ],
+                Carbon::now()->subDay()
+            );
+        }
 
         // ── 7. Complete the course via Eloquent → observer fires automatically
         $subscription = SubscribeCourse::where('user_id', $student->id)
@@ -210,8 +397,8 @@ class LmsEventCaptureSeeder extends Seeder
             $subscription->is_completed = 1;
             $subscription->completed_at = Carbon::now();
             $subscription->course_progress_status = 2;
+            $subscription->assignment_progress = 100;
             $subscription->save();
-            // SubscribeCourseObserver::updated() fires here and records the event
         }
 
         // ── 8. Back-dated historical events ──────────────────────────────────
