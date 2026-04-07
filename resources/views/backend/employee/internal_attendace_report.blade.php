@@ -409,6 +409,8 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+        initializeDates();
+
         fromDateInput.addEventListener('change', () => {
             enforceMaxRangeOnFromChange();
         });

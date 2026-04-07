@@ -39,8 +39,11 @@ class DatabaseSeeder extends Seeder
         $this->call(KpiLifecycleSeeder::class);
         $this->call(LmsEventCaptureSeeder::class);
 
-        //Artisan::call('translations:import');
-        //Artisan::call('storage:link');
+        // Artisan::call('translations:import');
+
+        if (! file_exists(public_path('storage'))) {
+            Artisan::call('storage:link');
+        }
 
         Model::reguard();
     }

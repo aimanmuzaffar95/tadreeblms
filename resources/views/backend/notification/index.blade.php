@@ -113,6 +113,10 @@
         color: #6b7280;
         font-size: 0.9rem;
     }
+
+    .ck-editor__editable {
+        height: 150px !important;
+    }
 </style>
 @endpush
 
@@ -312,15 +316,3 @@
     });
 </script>
 @endpush
-
-<style>
-    .ck-editor__editable {
-        height: 150px !important;
-    }
-
-    .form-check-input {
-        position: absolute;
-        margin-top: 0.3rem;
-        margin-left: 0.75px !important;
-    }
-</style>

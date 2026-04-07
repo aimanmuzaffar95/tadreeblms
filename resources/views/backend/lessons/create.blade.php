@@ -148,7 +148,7 @@
                                 <div class="form-group">
                                     <div for="lesson_image" class="control-label mb-2">
                                         {{ trans('labels.backend.lessons.fields.lesson_image') }}
-                                        {{ trans('labels.backend.lessons.max_file_size') }}
+                                        {{ trans('labels.backend.lessons.max_file_size') }} (JPEG, PNG, GIF)
                                     </div>
                                     <div class="custom-file-upload-wrapper">
                                         <input type="file" name="lesson_image[]" class="custom-file-input">
@@ -616,6 +616,8 @@
                     if (firstKey && xhr.responseJSON.errors[firstKey] && xhr.responseJSON.errors[firstKey][0]) {
                         message = xhr.responseJSON.errors[firstKey][0];
                     }
+                } else if (xhr.responseText && xhr.responseText.indexOf('POST Content-Length') !== -1) {
+                    message = 'Upload is too large for current server limits (post_max_size/upload_max_filesize). Increase PHP limits and try again.';
                 }
 
                 alert(message);

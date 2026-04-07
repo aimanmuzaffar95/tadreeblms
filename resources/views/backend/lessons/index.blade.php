@@ -264,8 +264,8 @@
                 var status = $('#status_filter').val();
                 var params = [];
 
-                if (courseId) params.push('course_id=' + courseId);
-                if (status) params.push('status=' + status);
+                if (courseId) params.push('course_id=' + encodeURIComponent(courseId));
+                if (status) params.push('status=' + encodeURIComponent(status));
 
                 window.location.href = '{{ route('admin.lessons.index') }}'
                     + (params.length ? '?' + params.join('&') : '');
