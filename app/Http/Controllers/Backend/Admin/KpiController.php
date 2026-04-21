@@ -9,6 +9,7 @@ use App\Models\Category;
 use App\Models\Course;
 use App\Models\Kpi;
 use App\Services\Kpi\KpiSnapshotService;
+use App\Services\Kpi\KpiTypeCatalog;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -71,7 +72,7 @@ class KpiController extends Controller
 
         $kpis->appends($request->query());
 
-        $kpiTypes = config('kpi.types', []);
+        $kpiTypes = $this->getSupportedKpiTypes();
 
         if ($request->ajax()) {
             return response()->json([
@@ -170,7 +171,7 @@ class KpiController extends Controller
             return abort(401);
         }
 
-        $kpiTypes = config('kpi.types', []);
+        $kpiTypes = $this->getSupportedKpiTypes();
         $maxWeight = config('kpi.max_weight', 100);
         $defaultWeight = config('kpi.default_weight', 1);
         $activeTotalWeight = (float) Kpi::query()->where('is_active', true)->sum('weight');
@@ -236,7 +237,7 @@ class KpiController extends Controller
 
         $kpi = Kpi::with('courses', 'categories')->findOrFail($kpi);
 
-        $kpiTypes = config('kpi.types', []);
+        $kpiTypes = $this->getSupportedKpiTypes();
         $maxWeight = config('kpi.max_weight', 100);
         $activeTotalWeight = (float) Kpi::query()->where('is_active', true)->sum('weight');
         $extremeWeightThreshold = (float) config('kpi.extreme_weight_warning_threshold', 70);
@@ -394,5 +395,13 @@ class KpiController extends Controller
         }
 
         return $warnings;
+    }
+
+    /**
+     * @return array<string, array>
+     */
+    protected function getSupportedKpiTypes(): array
+    {
+        return app(KpiTypeCatalog::class)->getSupportedOptions();
     }
 }
