@@ -6,9 +6,14 @@
     <div class="d-flex justify-content-between align-items-center pb-3">
         <h4 class="mb-0">KPI Management</h4>
         <div class="d-flex align-items-center">
+            @can('kpi_template_access')
+                <a href="{{ route('admin.kpi-templates.index') }}" class="btn btn-outline-secondary mr-2">Templates</a>
+            @endcan
+
             @can('kpi_target_access')
                 <a href="{{ route('admin.kpi-targets.index') }}" class="btn btn-outline-secondary mr-2">Manage Targets</a>
             @endcan
+
             @can('kpi_create')
                 <a href="{{ route('admin.kpis.create') }}" class="add-btn">Add KPI</a>
             @endcan
